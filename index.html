@@ -771,14 +771,14 @@ function tickClocks() {
   var w = S.clocks.w, b = S.clocks.b;
   if (S.clocks.turn === "w") w = Math.max(0, w - elapsed); else b = Math.max(0, b - elapsed);
   var myIsWhite = S.myColor === "white";
-  var oppClock = myIsWhite ? $("#oppClock") : $("#meClock");
-  var meClock = myIsWhite ? $("#meClock") : $("#oppClock");
-  // top clock is opponent, bottom is me
-  var topMs = myIsWhite ? w : b, botMs = myIsWhite ? b : w;
+  // top clock is the OPPONENT, bottom clock is ME — never swap them
+  var topColor = myIsWhite ? "b" : "w";
+  var topMs = topColor === "w" ? w : b;
+  var botMs = topColor === "w" ? b : w;
   var topEl = $("#oppClock"), botEl = $("#meClock");
   topEl.textContent = fmtClock(topMs);
   botEl.textContent = fmtClock(botMs);
-  var activeIsTop = (S.clocks.turn === "w") === myIsWhite;
+  var activeIsTop = S.clocks.turn === topColor;
   topEl.classList.toggle("active", activeIsTop);
   botEl.classList.toggle("active", !activeIsTop);
   topEl.classList.toggle("low", topMs <= 10000);
