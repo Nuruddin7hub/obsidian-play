@@ -1,0 +1,1370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="color-scheme" content="dark" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#06080b" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Obsidian Play" />
+<link rel="apple-touch-icon" href="icon.svg" />
+<title>Obsidian Play — a chess machine</title>
+<style>
+  :root{
+    --bg:#06080b; --surface:#0d1117; --elev:#121820;
+    --ink:#f2f5f7; --muted:#7c8794; --line:rgba(255,255,255,.07);
+    --cyan:#00f0ff; --green:#58c472; --amber:#f2c063; --red:#e06c5a;
+    --sq-l:#2e3442; --sq-d:#161a22;
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;min-height:100dvh;overscroll-behavior:none}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  input{font:inherit}
+  .mono{font-family:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace}
+  #app{max-width:680px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;padding:10px 12px calc(14px + env(safe-area-inset-bottom))}
+
+  /* ---------- top bar ---------- */
+  header{display:flex;align-items:center;gap:10px;padding:4px 2px 10px}
+  .logo{width:38px;height:38px;flex:none;border-radius:11px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center}
+  .logo img{width:26px;height:26px}
+  .brand{line-height:1.1;flex:1;min-width:0}
+  .brand b{font-size:17px;letter-spacing:.14em}
+  .brand span{display:block;font-size:11px;color:var(--muted);letter-spacing:.06em}
+  .pill{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 11px;font-size:12px;color:var(--muted);white-space:nowrap}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+  .dot.on{background:var(--green);box-shadow:0 0 0 4px rgba(88,196,114,.15)}
+  .dot.warn{background:var(--amber);box-shadow:0 0 0 4px rgba(242,192,99,.15);animation:blink 1s infinite}
+  .dot.sync{background:var(--cyan);box-shadow:0 0 0 4px rgba(0,240,255,.15);animation:blink 1s infinite}
+  .dot.bad{background:var(--red)}
+  @keyframes blink{50%{opacity:.35}}
+  .iconbtn{width:36px;height:36px;border-radius:10px;background:var(--surface);border:1px solid var(--line);font-size:17px;color:var(--muted);flex:none}
+  .iconbtn.on{color:var(--cyan);border-color:rgba(0,240,255,.4)}
+
+  /* ---------- connect ---------- */
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+  .connect h1{font-size:24px;margin:0 0 4px;letter-spacing:.02em}
+  .connect h1 em{font-style:normal;color:var(--cyan)}
+  .connect p{color:var(--muted);font-size:14px;line-height:1.5;margin:0 0 14px}
+  .connect p b{color:var(--ink)}
+  .field{margin-bottom:10px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;letter-spacing:.04em}
+  .field input{width:100%;background:var(--bg);border:1.5px solid var(--line);color:var(--ink);border-radius:12px;padding:12px 14px;font-size:16px;outline:none}
+  .field input:focus{border-color:var(--cyan)}
+  .field input[type=password]{font-family:ui-monospace,Menlo,Consolas,monospace}
+  .btn{display:block;width:100%;border:0;border-radius:14px;padding:15px 18px;font-weight:700;font-size:16px;background:var(--cyan);color:#03252b;letter-spacing:.02em}
+  .btn:active{transform:scale(.98)}
+  .btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+  .btn.danger{background:transparent;color:var(--red);border:1.5px solid rgba(224,108,90,.4)}
+  .btn:disabled{opacity:.45}
+  .fineprint{font-size:12px;color:var(--muted);line-height:1.55;margin:12px 0 0}
+  .fineprint a{color:var(--cyan)}
+  .status{font-size:13px;margin-top:10px;min-height:18px}
+  .status.err{color:var(--red)}
+  .status.ok{color:var(--green)}
+  .scopes{font-size:12px;color:var(--muted);line-height:1.6;margin:10px 0 0}
+  .scopes code{color:var(--cyan);font-family:ui-monospace,Menlo,Consolas,monospace}
+
+  /* ---------- home ---------- */
+  .hero{text-align:center;padding:18px 6px 8px}
+  .hero .knight{font-size:52px;line-height:1;color:var(--cyan);text-shadow:0 0 34px rgba(0,240,255,.35)}
+  .hero h1{font-size:clamp(30px,8vw,44px);margin:10px 0 2px;letter-spacing:.06em}
+  .hero p{color:var(--muted);font-size:14px;margin:0;letter-spacing:.05em}
+  .playbtn{width:100%;margin-top:18px;padding:20px;border-radius:18px;background:var(--cyan);color:#03252b;font-size:22px;font-weight:800;letter-spacing:.08em;box-shadow:0 10px 34px rgba(0,240,255,.22)}
+  .playbtn:active{transform:scale(.98)}
+  .playbtn:disabled{opacity:.45;box-shadow:none}
+  .chips{display:flex;gap:8px;margin-top:12px}
+  .chip{flex:1;padding:12px 4px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);font-size:15px;font-weight:700;text-align:center}
+  .chip small{display:block;font-size:11px;color:var(--muted);font-weight:500;margin-top:1px}
+  .chip.on{border-color:var(--cyan);color:var(--cyan)}
+  .chip.on small{color:var(--cyan)}
+  .rowline{display:flex;align-items:center;justify-content:space-between;margin-top:12px;font-size:13px;color:var(--muted)}
+  .toggle{position:relative;width:46px;height:26px;border-radius:999px;background:var(--elev);border:1px solid var(--line);flex:none}
+  .toggle::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--muted);transition:all .15s}
+  .toggle.on{background:rgba(0,240,255,.18);border-color:rgba(0,240,255,.5)}
+  .toggle.on::after{left:22px;background:var(--cyan)}
+  .seekline{font-size:13px;color:var(--muted);text-align:center;min-height:19px;margin-top:10px}
+  .seekline.err{color:var(--red)}
+  .seekline.ok{color:var(--cyan)}
+  .secttl{font-size:12px;letter-spacing:.14em;color:var(--muted);margin:22px 2px 8px;text-transform:uppercase}
+  .deck{display:flex;flex-direction:column;gap:8px}
+  .chcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 14px}
+  .chcard .who{font-weight:700;font-size:15px}
+  .chcard .meta{font-size:13px;color:var(--muted);margin-top:2px}
+  .chcard .acts{display:flex;gap:8px;margin-top:10px}
+  .chcard .acts .btn{padding:10px;font-size:14px}
+  .chcard .acts .btn.ghost{flex:1}
+  .empty{font-size:13px;color:var(--muted);text-align:center;padding:12px 0}
+  .ogames{display:flex;flex-direction:column;gap:8px}
+  .ogame{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+  .ogame .vs{flex:1;min-width:0}
+  .ogame .vs b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ogame .vs span{font-size:12px;color:var(--muted)}
+  .ogame .btn{width:auto;padding:9px 16px;font-size:14px}
+  .hint{font-size:12px;color:var(--muted);line-height:1.6;margin-top:14px;text-align:center}
+  .hint code{color:var(--cyan)}
+
+  /* ---------- arena ---------- */
+  #gameView{display:none;flex:1;flex-direction:column}
+  .player{display:flex;align-items:center;gap:10px;padding:2px 2px}
+  .avatar{width:34px;height:34px;border-radius:10px;background:var(--elev);border:1px solid var(--line);display:grid;place-items:center;font-weight:800;font-size:16px;flex:none}
+  .who{flex:1;min-width:0}
+  .who b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .who span{font-size:12px;color:var(--muted)}
+  .clock{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:26px;font-weight:700;padding:6px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--line);min-width:108px;text-align:center;letter-spacing:.02em}
+  .clock.active{border-color:rgba(0,240,255,.55);color:var(--cyan);box-shadow:0 0 18px rgba(0,240,255,.12)}
+  .clock.low{color:var(--red);border-color:rgba(224,108,90,.55)}
+  .clock.low.active{color:var(--red)}
+  .boardwrap{margin:10px auto 0;width:100%;max-width:560px}
+  .board{position:relative;width:100%;aspect-ratio:1/1;border:1px solid rgba(0,240,255,.35);border-radius:8px;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;background:var(--sq-d)}
+  .sq{position:absolute;width:12.5%;height:12.5%}
+  .sq.l{background:var(--sq-l)}
+  .sq.d{background:var(--sq-d)}
+  .sq.last{background:rgba(0,240,255,.28)}
+  .sq.sel{background:rgba(0,240,255,.4)}
+  .sq.check{background:radial-gradient(circle,rgba(224,108,90,.85) 0%,rgba(224,108,90,.25) 65%,transparent 75%)}
+  .sq .coord{position:absolute;font-size:10px;color:rgba(255,255,255,.45);pointer-events:none}
+  .sq .coord.f{left:3px;bottom:2px}
+  .sq .coord.r{right:3px;top:2px}
+  .sq.l .coord{color:rgba(0,0,0,.5)}
+  .dotm{position:absolute;left:50%;top:50%;width:30%;height:30%;transform:translate(-50%,-50%);border-radius:50%;background:rgba(0,240,255,.5);pointer-events:none}
+  .ring{position:absolute;inset:6%;border-radius:50%;border:4px solid rgba(0,240,255,.55);pointer-events:none}
+  .piece{position:absolute;width:12.5%;height:12.5%;left:0;top:0;will-change:transform;pointer-events:auto;touch-action:none;z-index:3}
+  .piece img{width:100%;height:100%;display:block;pointer-events:none}
+  .piece.drag{transition:none!important;z-index:9;pointer-events:none}
+  .piece.anim{transition:transform .18s ease}
+  .piece.captured{opacity:0;transition:opacity .18s}
+  .dock{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:12px}
+  .dock button{padding:13px 4px;border-radius:13px;background:var(--surface);border:1.5px solid var(--line);font-weight:700;font-size:14px}
+  .dock button:active{transform:scale(.97)}
+  .dock button.danger{color:var(--red);border-color:rgba(224,108,90,.4)}
+  .dock button:disabled{opacity:.4}
+  .dock button.armed{background:rgba(224,108,90,.15);border-color:var(--red)}
+  .tabs{display:flex;gap:6px;margin-top:12px}
+  .tabs button{flex:1;padding:11px;border-radius:11px;background:var(--surface);border:1px solid var(--line);font-size:13px;font-weight:700;color:var(--muted);position:relative}
+  .tabs button.on{color:var(--cyan);border-color:rgba(0,240,255,.4)}
+  .tabs button .badge{position:absolute;top:-6px;right:-4px;background:var(--red);color:#fff;font-size:11px;font-weight:800;min-width:18px;height:18px;border-radius:9px;display:grid;place-items:center;padding:0 4px}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-top:8px;padding:12px 14px;min-height:120px;max-height:220px;overflow-y:auto}
+  .moves{font-size:15px;line-height:2}
+  .moves .mn{color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;margin-right:2px}
+  .moves .mv{padding:3px 7px;border-radius:7px}
+  .moves .mv.cur{background:rgba(0,240,255,.18);color:var(--cyan)}
+  .kv{font-size:13px;color:var(--muted);line-height:1.9}
+  .kv b{color:var(--ink)}
+  .chatlog{font-size:14px;line-height:1.7}
+  .chatlog .who{color:var(--cyan);font-weight:700}
+  .chatrow{display:flex;gap:8px;margin-top:10px}
+  .chatrow input{flex:1;background:var(--bg);border:1.5px solid var(--line);color:var(--ink);border-radius:11px;padding:10px 12px;font-size:15px;outline:none}
+  .chatrow .btn{width:auto;padding:10px 18px;font-size:14px}
+
+  /* ---------- end overlay / sheets / toast ---------- */
+  #endOverlay{position:fixed;inset:0;background:rgba(3,5,8,.88);display:none;align-items:flex-end;justify-content:center;z-index:50;padding:16px}
+  #endOverlay.show{display:flex}
+  .endsheet{width:100%;max-width:520px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:26px 22px;text-align:center;animation:rise .35s ease}
+  @keyframes rise{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+  .endsheet .res{font-size:34px;font-weight:800;letter-spacing:.04em;margin:0}
+  .endsheet .res.win{color:var(--cyan)}
+  .endsheet .res.lose{color:var(--red)}
+  .endsheet .sub{color:var(--muted);font-size:14px;margin:8px 0 0}
+  .endsheet .final{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;margin:12px 0 0;color:var(--ink)}
+  .endsheet .btn{margin-top:14px}
+  .endsheet .btnrow{display:flex;gap:8px}
+  .endsheet .btnrow .btn{flex:1}
+  .sheet{position:fixed;inset:0;background:rgba(3,5,8,.7);display:none;align-items:flex-end;justify-content:center;z-index:60;padding:0}
+  .sheet.show{display:flex}
+  .sheetbox{width:100%;max-width:520px;background:var(--elev);border:1px solid var(--line);border-bottom:0;border-radius:22px 22px 0 0;padding:20px;animation:rise .25s ease}
+  .sheetbox h3{margin:0 0 4px;font-size:18px}
+  .sheetbox p{color:var(--muted);font-size:14px;margin:0 0 14px}
+  .promo{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .promo button{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:14px 4px;font-size:40px;line-height:1}
+  .promo button:active{border-color:var(--cyan)}
+  .promo button span{display:block;font-size:12px;color:var(--muted);margin-top:4px}
+  .challengeform .field{margin-bottom:12px}
+  #toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom));z-index:80;display:flex;flex-direction:column;gap:8px;width:min(92vw,480px);pointer-events:none}
+  .toast{background:var(--elev);border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:rise .2s ease}
+  .toast.err{border-color:rgba(224,108,90,.5);color:#f3b8ae}
+  .toast.ok{border-color:rgba(0,240,255,.4)}
+  .hide{display:none!important}
+
+  /* ---------- desktop ---------- */
+  @media (min-width:900px){
+    #app{max-width:1080px;padding:16px 24px 32px}
+    .desk{display:flex;gap:24px;align-items:flex-start}
+    .desk .arena{flex:1;max-width:640px;margin:0 auto}
+    .desk .side{width:320px;flex:none;position:sticky;top:16px}
+    .desk .side .panel{max-height:420px}
+    .boardwrap{max-width:640px}
+    .clock{font-size:30px;min-width:120px}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo"><img src="pieces/bN.svg" alt="knight"></div>
+    <div class="brand"><b>OBSIDIAN PLAY</b><span>THIS IS NOT A CHESS WEBSITE. IT'S A CHESS MACHINE.</span></div>
+    <div class="pill" id="connPill"><span class="dot" id="connDot"></span><span id="connText">OFFLINE</span></div>
+    <button class="iconbtn" id="soundBtn" title="Sound on/off">♪</button>
+  </header>
+
+  <!-- ============ CONNECT ============ -->
+  <section class="card connect" id="connectCard">
+    <h1>Play Lichess, <em>your way.</em></h1>
+    <p>Connect your own Lichess account and play real games on this board.
+    Your token is saved only on this device and sent only to lichess.org.</p>
+    <div class="field"><label>LICHESS USERNAME</label><input id="inUser" type="text" placeholder="e.g. yourusername" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
+    <div class="field"><label>PERSONAL ACCESS TOKEN</label><input id="inToken" type="password" placeholder="lip_…" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <button class="btn" id="connectBtn">CONNECT</button>
+    <div class="status" id="connStatus"></div>
+    <p class="fineprint">Create a token at <a href="https://lichess.org/account/oauth/token" target="_blank" rel="noopener">lichess.org/account/oauth/token</a> — tick <b>board:play</b>, <b>challenge:read</b> and <b>challenge:write</b>. Nothing else is needed for Phase 1. The token is like a password: never share it, never paste it anywhere except here.</p>
+    <p class="scopes">Phase 1 uses: <code>board:play</code> · <code>challenge:read</code> · <code>challenge:write</code></p>
+  </section>
+
+  <!-- ============ HOME ============ -->
+  <section id="homeView" class="hide">
+    <div class="hero">
+      <div class="knight">♞</div>
+      <h1>OBSIDIAN PLAY</h1>
+      <p>OPEN · MATCH · PLAY · FINISH · UNDERSTAND · PLAY AGAIN</p>
+    </div>
+    <button class="playbtn" id="playBtn">▶&nbsp; PLAY</button>
+    <div class="chips" id="chips">
+      <button class="chip" data-time="1" data-inc="0">1+0<small>Bullet</small></button>
+      <button class="chip" data-time="3" data-inc="2">3+2<small>Blitz</small></button>
+      <button class="chip on" data-time="5" data-inc="3">5+3<small>Blitz</small></button>
+      <button class="chip" data-time="10" data-inc="0">10+0<small>Rapid</small></button>
+    </div>
+    <div class="rowline"><span>Rated game</span><button class="toggle on" id="ratedToggle" aria-label="Rated toggle"></button></div>
+    <div class="seekline" id="seekLine"></div>
+    <div class="secttl">Challenge a player</div>
+    <div class="card challengeform">
+      <div class="field"><label>USERNAME</label><input id="chUser" type="text" placeholder="e.g. a friend's username" autocapitalize="off" spellcheck="false"></div>
+      <div class="field"><label>TIME CONTROL</label>
+        <select id="chTC" style="width:100%;background:var(--bg);border:1.5px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:15px">
+          <option value="1|0">1+0 Bullet</option>
+          <option value="3|2">3+2 Blitz</option>
+          <option value="5|3" selected>5+3 Blitz</option>
+          <option value="10|0">10+0 Rapid</option>
+          <option value="15|10">15+10 Rapid</option>
+        </select>
+      </div>
+      <button class="btn ghost" id="challengeBtn">SEND CHALLENGE</button>
+    </div>
+    <div class="secttl">Challenge deck</div>
+    <div class="deck" id="deck"><div class="empty">No challenges right now.</div></div>
+    <div class="secttl">Your games</div>
+    <div class="ogames" id="ogames"><div class="empty">No games in progress.</div></div>
+    <p class="hint">Board seeks on Lichess are Rapid and slower — if a Bullet or Blitz seek is refused, Lichess's exact message will appear under PLAY. Direct challenges accept any time control.</p>
+    <p class="hint" style="margin-top:6px"><button class="btn ghost" id="disconnectBtn" style="padding:10px;font-size:14px">Disconnect — forget token on this device</button></p>
+  </section>
+
+  <!-- ============ ARENA ============ -->
+  <section id="gameView">
+    <div class="desk">
+      <div class="arena">
+        <div class="player">
+          <div class="avatar" id="oppAv">?</div>
+          <div class="who"><b id="oppName">Opponent</b><span id="oppMeta">—</span></div>
+          <div class="clock" id="oppClock">--:--</div>
+        </div>
+        <div class="boardwrap"><div class="board" id="board"></div></div>
+        <div class="player" style="margin-top:10px">
+          <div class="avatar" id="meAv">?</div>
+          <div class="who"><b id="meName">You</b><span id="meMeta">—</span></div>
+          <div class="clock" id="meClock">--:--</div>
+        </div>
+        <div class="dock">
+          <button id="drawBtn">½ DRAW</button>
+          <button id="undoBtn">↩ UNDO</button>
+          <button id="flipBtn">⇅ FLIP</button>
+          <button id="resignBtn" class="danger">⚑ RESIGN</button>
+        </div>
+        <div class="tabs">
+          <button id="tabGame" class="on">GAME</button>
+          <button id="tabChat">CHAT<span class="badge hide" id="chatBadge">1</span></button>
+          <button id="tabDetails">DETAILS</button>
+        </div>
+        <div class="panel" id="panelGame"><div class="moves" id="moves">No moves yet.</div></div>
+        <div class="panel hide" id="panelChat">
+          <div class="chatlog" id="chatLog"><div class="empty">No chat yet.</div></div>
+          <div class="chatrow"><input id="chatInput" type="text" placeholder="Message your opponent…" maxlength="140"><button class="btn" id="chatSend">SEND</button></div>
+        </div>
+        <div class="panel hide" id="panelDetails"><div class="kv" id="details">—</div></div>
+      </div>
+      <div class="side hide" id="deskSide">
+        <div class="secttl" style="margin-top:0">Moves</div>
+        <div class="panel"><div class="moves" id="movesDesk">No moves yet.</div></div>
+        <div class="secttl">Challenge deck</div>
+        <div class="deck" id="deckDesk"><div class="empty">No challenges right now.</div></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ END OVERLAY ============ -->
+<div id="endOverlay">
+  <div class="endsheet">
+    <p class="res" id="endResult">—</p>
+    <p class="sub" id="endSub">—</p>
+    <p class="final" id="endFinal">—</p>
+    <div class="btnrow">
+      <button class="btn ghost" id="replayBtn">↻ REPLAY</button>
+      <button class="btn ghost" id="analyzeBtn">◈ ANALYZE</button>
+    </div>
+    <button class="btn" id="playAgainBtn">▶&nbsp; PLAY AGAIN</button>
+    <button class="btn ghost" id="endHomeBtn" style="margin-top:10px">Back to home</button>
+  </div>
+</div>
+
+<!-- ============ PROMOTION SHEET ============ -->
+<div class="sheet" id="promoSheet">
+  <div class="sheetbox">
+    <h3>Promote to</h3>
+    <p>Choose a piece. Tap one.</p>
+    <div class="promo" id="promoBtns">
+      <button data-p="q">♕<span>Queen</span></button>
+      <button data-p="r">♖<span>Rook</span></button>
+      <button data-p="b">♗<span>Bishop</span></button>
+      <button data-p="n">♘<span>Knight</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ RESIGN CONFIRM ============ -->
+<div class="sheet" id="confirmSheet">
+  <div class="sheetbox">
+    <h3 id="confirmTitle">Resign the game?</h3>
+    <p id="confirmText">This ends the game now and counts as a loss.</p>
+    <button class="btn danger" id="confirmYes">Yes, resign</button>
+    <button class="btn ghost" id="confirmNo" style="margin-top:10px">Cancel</button>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script>window.module={exports:{}};window.exports=window.module.exports;</script>
+<script src="vendor/chess.js"></script>
+<script>
+var Chess=window.module.exports.Chess;
+</script>
+<script>
+"use strict";
+/* =====================================================================
+   OBSIDIAN PLAY — Phase 1 (P0)
+   Mobile-first Lichess Board API client. Fair play: NO engine, NO eval,
+   NO hints during play. Token is sent ONLY to lichess.org, never logged.
+   ===================================================================== */
+var API = "https://lichess.org";
+var $ = function (s) { return document.querySelector(s); };
+var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
+
+var S = {
+  token: null, me: null,           // me: {id, username}
+  gameId: null, game: null,        // game: {white:{id,name,rating}, black:{...}, rated, speed, perf, clock, variant, initialFen, status, winner}
+  chess: new Chess(),
+  myColor: null, orient: "white",
+  serverMoves: [],                 // UCI list from last gameState
+  pendingUci: null, premove: null, // pendingUci: sent, awaiting server echo
+  selected: null, legal: [],
+  clocks: { w: 0, b: 0, winc: 0, binc: 0, turn: "w", at: 0 },
+  conn: "offline",                 // offline | connected | reconnecting | syncing | seeking
+  seeking: false, seekCtrl: null,
+  challenges: new Map(),           // id -> challenge object
+  ongoing: [],
+  lastTC: { time: 5, inc: 3 }, rated: true,
+  sound: true, chatUnread: 0,
+  endShown: false, gameEnded: false,
+  drag: null, promoPending: null,
+  evAbort: null, gameAbort: null,
+  evBackoff: 2000, gameBackoff: 2000,
+  reconnectTimer: null
+};
+
+/* ---------------- utils ---------------- */
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+function toast(msg, kind) {
+  var t = document.createElement("div");
+  t.className = "toast" + (kind ? " " + kind : "");
+  t.textContent = msg;
+  $("#toasts").appendChild(t);
+  setTimeout(function () { t.remove(); }, 6000);
+}
+function load(key, def) { try { var v = localStorage.getItem(key); return v == null ? def : JSON.parse(v); } catch (e) { return def; } }
+function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
+function errText(e) {
+  if (e && e.body) return e.body;
+  if (e && e.message) return e.message;
+  return String(e);
+}
+function lichessErrorText(body) {
+  if (!body) return "";
+  try { var j = JSON.parse(body); if (j && j.error) return String(j.error); } catch (e) {}
+  return String(body).slice(0, 200);
+}
+
+/* ---------------- audio / haptics (restrained, disableable) ---------------- */
+var AC = null;
+function beep(freq, dur, gain) {
+  if (!S.sound) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    var o = AC.createOscillator(), g = AC.createGain();
+    o.frequency.value = freq; o.type = "sine";
+    g.gain.value = gain || 0.05;
+    o.connect(g); g.connect(AC.destination);
+    o.start(); g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + dur);
+    o.stop(AC.currentTime + dur);
+  } catch (e) {}
+}
+function sndMove() { beep(520, 0.06, 0.04); }
+function sndCapture() { beep(300, 0.09, 0.06); if (navigator.vibrate) navigator.vibrate(12); }
+function sndCheck() { beep(760, 0.12, 0.06); if (navigator.vibrate) navigator.vibrate([15, 30, 15]); }
+function sndEnd() { beep(420, 0.25, 0.05); }
+function sndFound() { beep(660, 0.1, 0.05); setTimeout(function () { beep(880, 0.14, 0.05); }, 110); }
+
+/* ---------------- connection pill ---------------- */
+function setConn(mode, label) {
+  S.conn = mode;
+  var dot = $("#connDot"), txt = $("#connText");
+  dot.className = "dot" + (mode === "connected" ? " on" : mode === "reconnecting" ? " warn" : mode === "syncing" || mode === "seeking" ? " sync" : mode === "offline" ? " bad" : "");
+  txt.textContent = label || mode.toUpperCase();
+}
+
+/* ---------------- serialized API queue: ONE request at a time ---------------- */
+var Q = Promise.resolve();
+function enqueue(fn) {
+  var r = Q.then(fn, fn);
+  Q = r.catch(function () {});
+  return r;
+}
+function api(path, opts) {
+  opts = opts || {};
+  var method = opts.method || "GET";
+  var timeoutMs = opts.timeout == null ? 30000 : opts.timeout;
+  return enqueue(function () {
+    var ctrl = new AbortController();
+    var to = setTimeout(function () { ctrl.abort(); }, timeoutMs);
+    var headers = { "Authorization": "Bearer " + S.token, "Accept": opts.accept || "application/json" };
+    if (opts.body) headers["Content-Type"] = "application/x-www-form-urlencoded";
+    return fetch(API + path, { method: method, headers: headers, body: opts.body || undefined, credentials: "omit", signal: opts.signal || ctrl.signal })
+      .then(function (resp) {
+        clearTimeout(to);
+        if (resp.status === 429) {
+          var e = new Error("Lichess rate limit (429). Wait about a minute before trying again.");
+          e.status = 429; throw e;
+        }
+        if (!resp.ok) {
+          return resp.text().then(function (t) {
+            var e = new Error(lichessErrorText(t) || ("HTTP " + resp.status));
+            e.status = resp.status; e.body = lichessErrorText(t);
+            throw e;
+          });
+        }
+        return resp;
+      })
+      .catch(function (e) { clearTimeout(to); throw e; });
+  });
+}
+function apiJson(path, opts) { return api(path, opts).then(function (r) { return r.json(); }); }
+function apiPost(path, params) {
+  var body = params ? new URLSearchParams(params).toString() : null;
+  return api(path, { method: "POST", body: body });
+}
+
+/* ---------------- NDJSON stream reader ---------------- */
+function readNDJSON(resp, onObj, signal) {
+  var reader = resp.body.getReader();
+  var dec = new TextDecoder();
+  var buf = "";
+  function pump() {
+    return reader.read().then(function (res) {
+      if (res.done) return "closed";
+      buf += dec.decode(res.value, { stream: true });
+      var i;
+      while ((i = buf.indexOf("\n")) >= 0) {
+        var line = buf.slice(0, i).trim();
+        buf = buf.slice(i + 1);
+        if (line) { try { onObj(JSON.parse(line)); } catch (e) {} }
+      }
+      return pump();
+    });
+  }
+  return pump();
+}
+
+/* ---------------- token / connect ---------------- */
+function setConnectedUI(on) {
+  $("#connectCard").classList.toggle("hide", on);
+  $("#homeView").classList.toggle("hide", !on);
+  if (!on) { $("#gameView").style.display = "none"; }
+}
+function validateAndConnect(token, user, silent) {
+  S.token = token;
+  return api("/api/account", { timeout: 15000 }).then(function (r) { return r.json(); }).then(function (acc) {
+    S.me = { id: acc.id, username: acc.username };
+    if (user && user.toLowerCase() !== acc.username.toLowerCase()) {
+      toast("Token belongs to @" + acc.username + ", not @" + user + ". Using @" + acc.username + ".", "err");
+    }
+    save("op_token_v1", token);
+    save("op_user_v1", acc.username);
+    $("#inUser").value = acc.username;
+    $("#connStatus").textContent = "";
+    $("#connStatus").className = "status ok";
+    $("#connStatus").textContent = "Connected as @" + acc.username;
+    setConnectedUI(true);
+    updateMeUI();
+    openEventStream();
+    refreshOngoing();
+    if (!silent) toast("Connected as @" + acc.username, "ok");
+    return acc;
+  }).catch(function (e) {
+    S.token = null;
+    if (e && e.status === 401) {
+      $("#connStatus").className = "status err";
+      $("#connStatus").textContent = "Token rejected (401) — check the token and its scopes (board:play, challenge:read, challenge:write).";
+    } else {
+      $("#connStatus").className = "status err";
+      $("#connStatus").textContent = "Could not reach Lichess: " + errText(e);
+    }
+    throw e;
+  });
+}
+function disconnect() {
+  try { localStorage.removeItem("op_token_v1"); localStorage.removeItem("op_user_v1"); } catch (e) {}
+  if (S.evAbort) S.evAbort.abort();
+  if (S.gameAbort) S.gameAbort.abort();
+  if (S.seekCtrl) S.seekCtrl.abort();
+  S.token = null; S.me = null; S.gameId = null; S.game = null; S.challenges.clear();
+  setConn("offline", "OFFLINE");
+  setConnectedUI(false);
+  $("#inToken").value = "";
+  $("#connStatus").textContent = "";
+  renderDeck();
+}
+function updateMeUI() {
+  if (!S.me) return;
+  $("#meName").textContent = "@" + S.me.username + " (you)";
+  $("#meAv").textContent = S.me.username.charAt(0).toUpperCase();
+}
+
+/* ---------------- event stream ---------------- */
+function openEventStream() {
+  if (!S.token) return;
+  if (S.evAbort) S.evAbort.abort();
+  var ctrl = new AbortController();
+  S.evAbort = ctrl;
+  setConn("connected", "CONNECTED");
+  fetch(API + "/api/stream/event", {
+    headers: { "Authorization": "Bearer " + S.token, "Accept": "application/x-ndjson" },
+    credentials: "omit", signal: ctrl.signal
+  }).then(function (resp) {
+    if (!resp.ok) {
+      if (resp.status === 401) { disconnect(); toast("Token rejected by Lichess (401).", "err"); return null; }
+      throw new Error("HTTP " + resp.status);
+    }
+    S.evBackoff = 2000;
+    return readNDJSON(resp, onEvent);
+  }).then(function (why) {
+    if (ctrl.signal.aborted || !S.token) return;
+    setConn("reconnecting", "RECONNECTING");
+    var wait = S.evBackoff;
+    S.evBackoff = Math.min(S.evBackoff * 2, 30000);
+    setTimeout(openEventStream, wait);
+  }).catch(function (e) {
+    if (ctrl.signal.aborted || !S.token) return;
+    setConn("reconnecting", "RECONNECTING");
+    var wait = S.evBackoff;
+    S.evBackoff = Math.min(S.evBackoff * 2, 30000);
+    setTimeout(openEventStream, wait);
+  });
+}
+function onEvent(ev) {
+  if (!ev || !ev.type) return;
+  if (ev.type === "gameStart") {
+    var id = ev.game && ev.game.id;
+    if (id && id !== S.gameId) { openGame(id); }
+  } else if (ev.type === "gameFinish") {
+    var gid = ev.game && ev.game.id;
+    if (gid && gid === S.gameId) { /* game stream will end it; refresh list */ }
+    refreshOngoing();
+  } else if (ev.type === "challenge") {
+    var ch = ev.challenge;
+    if (ch && ch.id) { S.challenges.set(ch.id, ch); renderDeck(); toast("Challenge from @" + (ch.challenger && ch.challenger.name || "?"), "ok"); }
+  } else if (ev.type === "challengeCanceled" || ev.type === "challengeDeclined") {
+    var cid = ev.challenge && ev.challenge.id;
+    if (cid && S.challenges.has(cid)) { S.challenges.delete(cid); renderDeck(); }
+  }
+}
+
+/* ---------------- ongoing games ---------------- */
+function refreshOngoing() {
+  if (!S.token) return;
+  apiJson("/api/account/playing").then(function (d) {
+    S.ongoing = (d && d.nowPlaying) || [];
+    renderOngoing();
+  }).catch(function () { /* non-fatal; event stream still covers new games */ });
+}
+function renderOngoing() {
+  var box = $("#ogames");
+  var list = S.ongoing.filter(function (g) { return g.gameId !== S.gameId; });
+  if (!list.length) { box.innerHTML = '<div class="empty">No games in progress.</div>'; return; }
+  box.innerHTML = "";
+  list.forEach(function (g) {
+    var opp = g.opponent || {};
+    var row = document.createElement("div");
+    row.className = "ogame";
+    row.innerHTML = '<div class="vs"><b>' + esc(opp.username || "?") + '</b><span>' + esc(g.speed || "") + " · " + esc(g.color === "white" ? "you play White" : g.color === "black" ? "you play Black" : "") + " · " + esc(g.variant && g.variant.name || "Standard") + "</span></div>";
+    var b = document.createElement("button");
+    b.className = "btn"; b.textContent = "RESUME";
+    b.onclick = function () { openGame(g.gameId); };
+    row.appendChild(b);
+    box.appendChild(row);
+  });
+}
+
+/* ---------------- game stream ---------------- */
+function openGame(gameId) {
+  if (S.gameAbort) S.gameAbort.abort();
+  S.gameId = gameId; S.gameEnded = false; S.endShown = false;
+  S.pendingUci = null; S.premove = null; S.selected = null; S.chatUnread = 0;
+  $("#endOverlay").classList.remove("show");
+  $("#homeView").classList.add("hide");
+  $("#gameView").style.display = "flex";
+  $("#chatLog").innerHTML = '<div class="empty">No chat yet.</div>';
+  $("#chatBadge").classList.add("hide");
+  setConn("connected", "CONNECTED");
+  sndFound();
+  var ctrl = new AbortController();
+  S.gameAbort = ctrl;
+  fetch(API + "/api/board/game/stream/" + gameId, {
+    headers: { "Authorization": "Bearer " + S.token, "Accept": "application/x-ndjson" },
+    credentials: "omit", signal: ctrl.signal
+  }).then(function (resp) {
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    S.gameBackoff = 2000;
+    return readNDJSON(resp, onGameEvent);
+  }).then(function () {
+    if (ctrl.signal.aborted || !S.token) return;
+    if (S.gameEnded) return; // server closed the stream because the game ended
+    setConn("reconnecting", "RECONNECTING");
+    var wait = S.gameBackoff;
+    S.gameBackoff = Math.min(S.gameBackoff * 2, 30000);
+    S.reconnectTimer = setTimeout(function () { if (S.gameId === gameId && !S.gameEnded) openGame(gameId); }, wait);
+  }).catch(function (e) {
+    if (ctrl.signal.aborted || !S.token) return;
+    if (S.gameEnded) return;
+    setConn("reconnecting", "RECONNECTING");
+    var wait = S.gameBackoff;
+    S.gameBackoff = Math.min(S.gameBackoff * 2, 30000);
+    S.reconnectTimer = setTimeout(function () { if (S.gameId === gameId && !S.gameEnded) openGame(gameId); }, wait);
+  });
+}
+function onGameEvent(ev) {
+  if (!ev || !ev.type) return;
+  if (ev.type === "gameFull") {
+    S.game = ev;
+    S.myColor = (S.me && ev.white && ev.white.id === S.me.id) ? "white" : "black";
+    S.orient = S.myColor;
+    S.chess = new Chess(ev.initialFen && ev.initialFen !== "startpos" ? ev.initialFen : undefined);
+    S.serverMoves = [];
+    applyState(ev.state, null);
+    renderAll();
+    updateDetails();
+  } else if (ev.type === "gameState") {
+    applyState(ev, null);
+    renderAll();
+  } else if (ev.type === "chatLine") {
+    addChat(ev.username, ev.text, ev.room);
+  } else if (ev.type === "opponentGone") {
+    if (ev.gone) toast("Your opponent left the game.", "err");
+  }
+}
+function applyState(gs, _unused) {
+  if (!gs) return;
+  var moves = gs.moves ? gs.moves.split(" ").filter(Boolean) : [];
+  // authoritative reconciliation: if server moves differ from local history, rebuild
+  var local = S.chess.history({ verbose: true }).map(function (m) { return m.from + m.to + (m.promotion || ""); });
+  var same = moves.length === local.length && moves.every(function (m, i) { return m === local[i]; });
+  if (!same) {
+    var fresh = new Chess(S.game && S.game.initialFen && S.game.initialFen !== "startpos" ? S.game.initialFen : undefined);
+    var ok = true;
+    moves.forEach(function (uci) {
+      try { fresh.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] || undefined }); }
+      catch (e) { ok = false; }
+    });
+    if (ok) {
+      var prevLen = local.length;
+      S.chess = fresh;
+      if (moves.length > prevLen) {
+        var lastUci = moves[moves.length - 1];
+        var cap = S.chess.history({ verbose: true });
+        var last = cap[cap.length - 1];
+        if (last) { if (last.captured) sndCapture(); else sndMove(); if (S.chess.inCheck()) sndCheck(); }
+        S.lastAnim = { from: lastUci.slice(0, 2), to: lastUci.slice(2, 4) };
+      }
+    }
+  }
+  S.serverMoves = moves;
+  if (S.pendingUci && moves.indexOf(S.pendingUci) >= 0) { S.pendingUci = null; if (S.conn === "syncing") setConn("connected", "CONNECTED"); }
+  // clocks
+  S.clocks.w = gs.wtime != null ? gs.wtime : S.clocks.w;
+  S.clocks.b = gs.btime != null ? gs.btime : S.clocks.b;
+  S.clocks.winc = gs.winc != null ? gs.winc : S.clocks.winc;
+  S.clocks.binc = gs.binc != null ? gs.binc : S.clocks.binc;
+  S.clocks.turn = S.chess.turn();
+  S.clocks.at = performance.now();
+  // premove: now my turn? fire it
+  if (S.premove && S.chess.turn() === (S.myColor === "white" ? "w" : "b") && !S.gameEnded) {
+    var pm = S.premove; S.premove = null;
+    doMove(pm.from, pm.to, pm.promotion, true);
+  }
+  if (gs.status && gs.status !== "started" && gs.status !== "created") {
+    endGame(gs.status, gs.winner);
+  }
+}
+function endGame(status, winner) {
+  if (S.gameEnded) return;
+  S.gameEnded = true;
+  S.pendingUci = null; S.premove = null;
+  if (S.seekCtrl) { try { S.seekCtrl.abort(); } catch (e) {} S.seeking = false; updatePlayBtn(); }
+  sndEnd();
+  var meWon = winner ? (winner === S.myColor) : null;
+  var label;
+  if (status === "mate") label = meWon ? "CHECKMATE — YOU WIN" : "CHECKMATE — YOU LOSE";
+  else if (status === "resign") label = meWon ? "OPPONENT RESIGNED — YOU WIN" : "YOU RESIGNED";
+  else if (status === "timeout" || status === "outoftime") label = meWon ? "TIME — YOU WIN" : "TIME — YOU LOSE";
+  else if (status === "stalemate") label = "STALEMATE — DRAW";
+  else if (status === "draw") label = "DRAW";
+  else if (status === "aborted") label = "GAME ABORTED";
+  else label = status.toUpperCase();
+  var hist = S.chess.history({ verbose: true });
+  var last = hist[hist.length - 1];
+  var res = $("#endResult");
+  res.textContent = label;
+  res.className = "res " + (meWon === true ? "win" : meWon === false ? "lose" : "");
+  $("#endSub").textContent = (S.game ? ((S.game.white.name || "?") + " vs " + (S.game.black.name || "?")) : "") + " · " + (S.game && S.game.speed ? S.game.speed : "");
+  $("#endFinal").textContent = last ? ("Final move: " + last.san + "  ·  " + hist.length + " plies") : "";
+  $("#endOverlay").classList.add("show");
+  S.endShown = true;
+  refreshOngoing();
+}
+
+/* ---------------- clocks ---------------- */
+function fmtClock(ms) {
+  if (ms == null || isNaN(ms)) return "--:--";
+  ms = Math.max(0, Math.round(ms));
+  var s = Math.floor(ms / 1000), m = Math.floor(s / 60), sec = s % 60;
+  var tenths = Math.floor((ms % 1000) / 100);
+  if (m >= 20) return m + ":" + String(sec).padStart(2, "0");
+  if (m > 0) return m + ":" + String(sec).padStart(2, "0");
+  return "0:" + String(sec).padStart(2, "0") + "." + tenths;
+}
+function tickClocks() {
+  if (!S.game || S.gameEnded) return;
+  var now = performance.now();
+  var elapsed = now - S.clocks.at;
+  var w = S.clocks.w, b = S.clocks.b;
+  if (S.clocks.turn === "w") w = Math.max(0, w - elapsed); else b = Math.max(0, b - elapsed);
+  var myIsWhite = S.myColor === "white";
+  var oppClock = myIsWhite ? $("#oppClock") : $("#meClock");
+  var meClock = myIsWhite ? $("#meClock") : $("#oppClock");
+  // top clock is opponent, bottom is me
+  var topMs = myIsWhite ? w : b, botMs = myIsWhite ? b : w;
+  var topEl = $("#oppClock"), botEl = $("#meClock");
+  topEl.textContent = fmtClock(topMs);
+  botEl.textContent = fmtClock(botMs);
+  var activeIsTop = (S.clocks.turn === "w") === myIsWhite;
+  topEl.classList.toggle("active", activeIsTop);
+  botEl.classList.toggle("active", !activeIsTop);
+  topEl.classList.toggle("low", topMs <= 10000);
+  botEl.classList.toggle("low", botMs <= 10000);
+}
+setInterval(tickClocks, 100);
+
+/* ---------------- chat ---------------- */
+function addChat(user, text, room) {
+  var log = $("#chatLog");
+  var empty = log.querySelector(".empty");
+  if (empty) empty.remove();
+  var div = document.createElement("div");
+  div.innerHTML = '<span class="who">' + esc(user) + ":</span> " + esc(text);
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  if ($("#panelChat").classList.contains("hide") && user !== (S.me && S.me.username)) {
+    S.chatUnread++;
+    var b = $("#chatBadge");
+    b.textContent = S.chatUnread;
+    b.classList.remove("hide");
+  }
+}
+function sendChat() {
+  var inp = $("#chatInput");
+  var text = inp.value.trim();
+  if (!text || !S.gameId) return;
+  inp.value = "";
+  apiPost("/api/board/game/" + S.gameId + "/chat", { room: "player", text: text }).then(function () {
+    addChat(S.me.username, text, "player");
+  }).catch(function (e) { toast("Chat failed: " + errText(e), "err"); });
+}
+</script>
+<script>
+"use strict";
+/* ---------------- board ---------------- */
+var FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
+var boardEl = null, squaresEl = {}, piecesLayer = null;
+var pieceEls = {}; // square -> element
+function sqToXY(sq) {
+  var f = FILES.indexOf(sq[0]), r = parseInt(sq[1], 10) - 1;
+  if (S.orient === "white") return { x: f, y: 7 - r };
+  return { x: 7 - f, y: r };
+}
+function xyToSq(x, y) {
+  if (S.orient === "white") return FILES[x] + (8 - y);
+  return FILES[7 - x] + (y + 1);
+}
+function buildBoard() {
+  boardEl = $("#board");
+  boardEl.innerHTML = "";
+  squaresEl = {};
+  pieceEls = {};
+  var grid = document.createElement("div");
+  grid.style.cssText = "position:absolute;inset:0";
+  for (var r = 0; r < 8; r++) {
+    for (var f = 0; f < 8; f++) {
+      var sq = xyToSq(f, r);
+      var d = document.createElement("div");
+      d.className = "sq " + (((f + r) % 2 === 0) ? "l" : "d");
+      d.style.left = (f * 12.5) + "%"; d.style.top = (r * 12.5) + "%";
+      d.dataset.square = sq;
+      if (f === 0) { var cr = document.createElement("span"); cr.className = "coord r"; cr.textContent = sq[1]; d.appendChild(cr); }
+      if (r === 7) { var cf = document.createElement("span"); cf.className = "coord f"; cf.textContent = sq[0]; d.appendChild(cf); }
+      grid.appendChild(d);
+      squaresEl[sq] = d;
+    }
+  }
+  boardEl.appendChild(grid);
+  piecesLayer = document.createElement("div");
+  piecesLayer.style.cssText = "position:absolute;inset:0;z-index:2";
+  boardEl.appendChild(piecesLayer);
+  if (!boardEl.dataset.bound) {
+    boardEl.dataset.bound = "1";
+    boardEl.addEventListener("pointerdown", onBoardPointerDown);
+    boardEl.addEventListener("pointermove", onBoardPointerMove);
+    boardEl.addEventListener("pointerup", onBoardPointerUp);
+    boardEl.addEventListener("pointercancel", onBoardPointerUp);
+  }
+}
+function pieceFile(piece) { return (piece.color === "w" ? "w" : "b") + piece.type.toUpperCase() + ".svg"; }
+function renderPieces(animFrom, animTo) {
+  var bd = S.chess.board();
+  var seen = {};
+  var animEl = null;
+  bd.forEach(function (row, ri) {
+    row.forEach(function (pc, fi) {
+      if (!pc) return;
+      var sq = FILES[fi] + (8 - ri);
+      seen[sq] = true;
+      var xy = sqToXY(sq);
+      var el = pieceEls[sq];
+      var key = pc.color + pc.type;
+      if (!el) {
+        el = document.createElement("div");
+        el.className = "piece";
+        var img = document.createElement("img");
+        img.src = "pieces/" + pieceFile(pc);
+        img.alt = pc.type;
+        img.draggable = false;
+        el.appendChild(img);
+        el.dataset.square = sq;
+        el.dataset.piece = key;
+        piecesLayer.appendChild(el);
+        pieceEls[sq] = el;
+      } else if (el.dataset.piece !== key) {
+        el.dataset.piece = key;
+        el.querySelector("img").src = "pieces/" + pieceFile(pc);
+      }
+      el.style.transform = "translate(" + (xy.x * 100) + "%, " + (xy.y * 100) + "%)";
+      if (animFrom && animTo && sq === animTo) animEl = el;
+    });
+  });
+  Object.keys(pieceEls).forEach(function (sq) {
+    if (!seen[sq]) { var el = pieceEls[sq]; delete pieceEls[sq]; if (el.parentNode) el.parentNode.removeChild(el); }
+  });
+  if (animEl && animFrom) {
+    var fromXY = sqToXY(animFrom);
+    animEl.classList.remove("anim");
+    animEl.style.transform = "translate(" + (fromXY.x * 100) + "%, " + (fromXY.y * 100) + "%)";
+    void animEl.offsetWidth;
+    animEl.classList.add("anim");
+    var toXY = sqToXY(animTo);
+    animEl.style.transform = "translate(" + (toXY.x * 100) + "%, " + (toXY.y * 100) + "%)";
+    setTimeout(function () { animEl.classList.remove("anim"); }, 200);
+  }
+}
+function clearMarkers() {
+  $$(".sq").forEach(function (el) { el.classList.remove("sel", "last", "check"); });
+  $$(".dotm,.ring").forEach(function (el) { el.remove(); });
+}
+function markSquares() {
+  clearMarkers();
+  var hist = S.chess.history({ verbose: true });
+  var last = hist[hist.length - 1];
+  if (last) {
+    if (squaresEl[last.from]) squaresEl[last.from].classList.add("last");
+    if (squaresEl[last.to]) squaresEl[last.to].classList.add("last");
+  }
+  if (S.chess.inCheck()) {
+    var ksq = null;
+    S.chess.board().forEach(function (row, ri) {
+      row.forEach(function (pc, fi) {
+        if (pc && pc.type === "k" && pc.color === S.chess.turn()) ksq = FILES[fi] + (8 - ri);
+      });
+    });
+    if (ksq && squaresEl[ksq]) squaresEl[ksq].classList.add("check");
+  }
+  if (S.selected) {
+    if (squaresEl[S.selected]) squaresEl[S.selected].classList.add("sel");
+    S.legal.forEach(function (m) {
+      var el = squaresEl[m.to];
+      if (!el) return;
+      var dot = document.createElement("div");
+      dot.className = m.captured ? "ring" : "dotm";
+      el.appendChild(dot);
+    });
+  }
+  if (S.premove && squaresEl[S.premove.to]) squaresEl[S.premove.to].classList.add("sel");
+}
+function renderMoves() {
+  var hist = S.chess.history({ verbose: true });
+  var html = "";
+  if (!hist.length) html = "No moves yet.";
+  else {
+    for (var i = 0; i < hist.length; i += 2) {
+      var n = i / 2 + 1;
+      html += '<span class="mn">' + n + '.</span> <span class="mv' + (i === hist.length - 1 ? " cur" : "") + '">' + esc(hist[i].san) + "</span> ";
+      if (hist[i + 1]) html += '<span class="mv' + (i + 1 === hist.length - 1 ? " cur" : "") + '">' + esc(hist[i + 1].san) + "</span> ";
+    }
+  }
+  $("#moves").innerHTML = html;
+  $("#movesDesk").innerHTML = html;
+}
+function renderPlayers() {
+  if (!S.game) return;
+  var myIsWhite = S.myColor === "white";
+  var opp = myIsWhite ? S.game.black : S.game.white;
+  var me = myIsWhite ? S.game.white : S.game.black;
+  $("#oppName").textContent = "@" + (opp.name || opp.id || "?");
+  $("#oppMeta").textContent = (opp.rating ? opp.rating + " · " : "") + (S.game.rated ? "Rated" : "Casual") + " · " + (S.game.perf && S.game.perf.name ? S.game.perf.name : S.game.speed || "");
+  $("#oppAv").textContent = (opp.name || "?").charAt(0).toUpperCase();
+  $("#meName").textContent = "@" + (me.name || me.id || "?") + " (you)";
+  $("#meMeta").textContent = (me.rating ? me.rating + " · " : "") + (S.myColor === "white" ? "White" : "Black");
+  $("#meAv").textContent = (me.name || "?").charAt(0).toUpperCase();
+}
+function renderAll() {
+  renderPlayers();
+  if (S.lastAnim) { renderPieces(S.lastAnim.from, S.lastAnim.to); S.lastAnim = null; }
+  else renderPieces();
+  markSquares();
+  renderMoves();
+  updateDock();
+}
+function updateDetails() {
+  if (!S.game) { $("#details").textContent = "—"; return; }
+  var g = S.game;
+  $("#details").innerHTML =
+    "<b>Game:</b> " + esc(g.id) + "<br>" +
+    "<b>Variant:</b> " + esc(g.variant && (g.variant.name || g.variant.key) || "Standard") + "<br>" +
+    "<b>Speed:</b> " + esc(g.speed || "—") + "<br>" +
+    "<b>Rated:</b> " + (g.rated ? "Yes" : "No") + "<br>" +
+    "<b>Clock:</b> " + (g.clock ? (g.clock.initial / 60000) + " min + " + (g.clock.increment / 1000) + " s" : "—") + "<br>" +
+    "<b>White:</b> " + esc(g.white.name || g.white.id || "?") + (g.white.rating ? " (" + g.white.rating + ")" : "") + "<br>" +
+    "<b>Black:</b> " + esc(g.black.name || g.black.id || "?") + (g.black.rating ? " (" + g.black.rating + ")" : "");
+}
+
+/* ---------------- input: tap + drag ---------------- */
+function squareFromEvent(e) {
+  var rect = boardEl.getBoundingClientRect();
+  var x = Math.floor((e.clientX - rect.left) / rect.width * 8);
+  var y = Math.floor((e.clientY - rect.top) / rect.height * 8);
+  if (x < 0 || x > 7 || y < 0 || y > 7) return null;
+  return xyToSq(x, y);
+}
+function myTurn() {
+  return S.game && !S.gameEnded && S.chess.turn() === (S.myColor === "white" ? "w" : "b");
+}
+function legalFrom(sq) {
+  try { return S.chess.moves({ square: sq, verbose: true }); } catch (e) { return []; }
+}
+/* Legal moves for MY color even when it is not my turn (needed for premoves).
+   chess.js only generates moves for the side to move, so flip the turn in a
+   throwaway copy of the position. The server validates the real move anyway. */
+function myLegalFrom(sq) {
+  var my = S.myColor === "white" ? "w" : "b";
+  if (S.chess.turn() === my) return legalFrom(sq);
+  try {
+    var parts = S.chess.fen().split(" ");
+    parts[1] = my;
+    var tmp = new Chess(parts.join(" "));
+    return tmp.moves({ square: sq, verbose: true });
+  } catch (e) { return []; }
+}
+function selectSquare(sq) {
+  var pc = S.chess.get(sq);
+  if (pc && pc.color === (S.myColor === "white" ? "w" : "b")) {
+    S.selected = sq;
+    S.legal = myLegalFrom(sq);
+    markSquares();
+    return true;
+  }
+  return false;
+}
+function onBoardPointerDown(e) {
+  if (!S.game || S.gameEnded) return;
+  var sq = squareFromEvent(e);
+  if (!sq) return;
+  var pc = S.chess.get(sq);
+  var mine = pc && pc.color === (S.myColor === "white" ? "w" : "b");
+  if (mine) {
+    S.drag = { from: sq, x0: e.clientX, y0: e.clientY, moved: false, el: pieceEls[sq] || null };
+    if (S.drag.el) { try { boardEl.setPointerCapture(e.pointerId); } catch (err) {} }
+  }
+}
+function onBoardPointerMove(e) {
+  if (!S.drag || !S.drag.el) return;
+  var dx = e.clientX - S.drag.x0, dy = e.clientY - S.drag.y0;
+  if (Math.abs(dx) + Math.abs(dy) > 8) S.drag.moved = true;
+  if (S.drag.moved) {
+    var rect = boardEl.getBoundingClientRect();
+    var base = sqToXY(S.drag.from);
+    S.drag.el.classList.add("drag");
+    S.drag.el.style.transform = "translate(calc(" + (base.x * 100) + "% + " + dx + "px), calc(" + (base.y * 100) + "% + " + dy + "px))";
+  }
+}
+function onBoardPointerUp(e) {
+  var d = S.drag; S.drag = null;
+  if (!S.game || S.gameEnded) return;
+  var sq = squareFromEvent(e);
+  if (d && d.el) d.el.classList.remove("drag");
+  if (!sq) { renderPieces(); return; }
+  if (d && d.moved) {
+    if (sq !== d.from) { tryMove(d.from, sq); return; }
+    renderPieces(); // dropped back on its own square: snap back, then tap-select
+  }
+  // tap logic
+  if (S.selected && S.selected !== sq) {
+    var mv = S.legal.find(function (m) { return m.to === sq; });
+    if (mv) { tryMove(S.selected, sq); return; }
+  }
+  if (!selectSquare(sq)) { S.selected = null; S.legal = []; markSquares(); }
+}
+function tryMove(from, to, promotion) {
+  if (!S.game || S.gameEnded) return;
+  var moves = myLegalFrom(from).filter(function (m) { return m.to === to; });
+  if (!moves.length) { S.selected = null; S.legal = []; markSquares(); return; }
+  var needsPromo = moves.some(function (m) { return m.flags.indexOf("p") >= 0; });
+  if (needsPromo && !promotion) {
+    S.promoPending = { from: from, to: to };
+    $("#promoSheet").classList.add("show");
+    return;
+  }
+  doMove(from, to, promotion || "q", false);
+}
+function doMove(from, to, promotion, isPremove) {
+  var uci = null;
+  var mv = null;
+  try {
+    var test = myLegalFrom(from).find(function (m) { return m.to === to; });
+    if (!test) return;
+    var isPromo = test.flags.indexOf("p") >= 0;
+    uci = from + to + (isPromo ? (promotion || "q") : "");
+    if (!isPremove && !myTurn()) {
+      // not my turn: store as premove
+      S.premove = { from: from, to: to, promotion: isPromo ? (promotion || "q") : null };
+      S.selected = null; S.legal = [];
+      markSquares();
+      toast("Premove set: " + test.san);
+      return;
+    }
+    mv = S.chess.move({ from: from, to: to, promotion: isPromo ? (promotion || "q") : undefined });
+  } catch (e) { return; }
+  if (!mv) return;
+  S.selected = null; S.legal = [];
+  if (mv.captured) sndCapture(); else sndMove();
+  if (S.chess.inCheck()) sndCheck();
+  S.lastAnim = { from: from, to: to };
+  renderAll();
+  // optimistic clock: add increment to my displayed clock
+  var inc = S.myColor === "white" ? S.clocks.winc : S.clocks.binc;
+  if (S.myColor === "white") S.clocks.w += inc; else S.clocks.b += inc;
+  S.clocks.turn = S.chess.turn(); S.clocks.at = performance.now();
+  S.pendingUci = uci;
+  setConn("syncing", "MOVE SYNCING");
+  apiPost("/api/board/game/" + S.gameId + "/move/" + uci).then(function () {
+    // server echo arrives via gameState; if it never does, reconciliation fixes it
+    setTimeout(function () {
+      if (S.pendingUci === uci) { /* still unconfirmed: keep syncing state until next gameState */ }
+    }, 1000);
+  }).catch(function (e) {
+    toast("Move rejected: " + errText(e), "err");
+    // reconcile from server state
+    if (S.game) openGame(S.gameId);
+  });
+}
+
+/* ---------------- seek / matchmaking ---------------- */
+function tcLabel(tc) { return tc.time + "+" + tc.inc; }
+function updatePlayBtn() {
+  var b = $("#playBtn");
+  if (S.seeking) { b.textContent = "✕  CANCEL SEEK"; b.disabled = false; }
+  else { b.innerHTML = "▶&nbsp; PLAY"; b.disabled = !S.token || !!S.gameId; }
+  b.disabled = b.disabled || !S.token;
+}
+function setSeekLine(msg, kind) {
+  var el = $("#seekLine");
+  el.textContent = msg || "";
+  el.className = "seekline" + (kind ? " " + kind : "");
+}
+function startSeek() {
+  if (!S.token) { toast("Connect first.", "err"); return; }
+  if (S.gameId) return;
+  var tc = S.lastTC;
+  S.seeking = true;
+  updatePlayBtn();
+  setSeekLine("Seeking " + tcLabel(tc) + (S.rated ? " rated" : " casual") + "…", "ok");
+  setConn("seeking", "SEEKING");
+  var ctrl = new AbortController();
+  S.seekCtrl = ctrl;
+  var body = new URLSearchParams({ rated: String(S.rated), variant: "standard", time: String(tc.time), increment: String(tc.inc) }).toString();
+  fetch(API + "/api/board/seek", {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + S.token, "Accept": "application/x-ndjson", "Content-Type": "application/x-www-form-urlencoded" },
+    body: body, credentials: "omit", signal: ctrl.signal
+  }).then(function (resp) {
+    if (!resp.ok) {
+      return resp.text().then(function (t) {
+        var msg = lichessErrorText(t) || ("HTTP " + resp.status);
+        S.seeking = false; updatePlayBtn(); setConn("connected", "CONNECTED");
+        setSeekLine("Lichess refused the seek: " + msg, "err");
+        toast("Seek refused: " + msg, "err");
+      });
+    }
+    setSeekLine("Seek live — waiting for an opponent…", "ok");
+    return resp.text().then(function () {
+      // stream closed: accepted (gameStart arrives on event stream) or expired
+      if (S.seeking) {
+        S.seeking = false; updatePlayBtn(); setConn("connected", "CONNECTED");
+        if (!S.gameId) setSeekLine("Seek ended — no opponent found. Tap PLAY to try again.");
+      }
+    });
+  }).catch(function (e) {
+    if (ctrl.signal.aborted) { setSeekLine("Seek cancelled."); }
+    else {
+      S.seeking = false; updatePlayBtn(); setConn("connected", "CONNECTED");
+      setSeekLine("Seek error: " + errText(e), "err");
+    }
+  });
+}
+function cancelSeek() {
+  if (S.seekCtrl) S.seekCtrl.abort();
+  S.seeking = false;
+  updatePlayBtn();
+  setConn("connected", "CONNECTED");
+  setSeekLine("Seek cancelled.");
+}
+
+/* ---------------- challenges ---------------- */
+function tcOf(ch) {
+  if (!ch) return "—";
+  var tc = ch.timeControl || {};
+  if (tc.type === "correspondence" || tc.days) return tc.days + " days/turn";
+  if (tc.type === "unlimited") return "Unlimited";
+  var lim = tc.limit, inc = tc.increment;
+  if (lim == null) return "—";
+  return (lim / 60) + "+" + (inc || 0);
+}
+function renderDeck() {
+  var list = Array.from(S.challenges.values());
+  var html = "";
+  if (!list.length) html = '<div class="empty">No challenges right now.</div>';
+  list.forEach(function (ch) {
+    var incoming = ch.challenger && S.me && ch.challenger.id !== S.me.id;
+    var name = incoming ? (ch.challenger.name || ch.challenger.id) : (ch.destUser && (ch.destUser.name || ch.destUser.id) || "?");
+    var rating = incoming ? ch.challenger.rating : (ch.destUser && ch.destUser.rating);
+    html += '<div class="chcard" data-id="' + esc(ch.id) + '"><div class="who">' + (incoming ? "⚔ " : "→ ") + esc(name) + (rating ? " · " + rating : "") + '</div>' +
+      '<div class="meta">' + esc(tcOf(ch)) + " · " + (ch.rated ? "Rated" : "Casual") + " · " + esc(ch.variant && ch.variant.name || "Standard") + (incoming ? " · challenges you" : " · waiting…") + "</div>" +
+      '<div class="acts">' + (incoming
+        ? '<button class="btn" data-act="accept">ACCEPT</button><button class="btn ghost" data-act="decline">DECLINE</button>'
+        : '<button class="btn ghost" data-act="cancel">CANCEL</button>') + "</div></div>";
+  });
+  $("#deck").innerHTML = html;
+  $("#deckDesk").innerHTML = html;
+  $$("#deck .chcard, #deckDesk .chcard").forEach(function (card) {
+    card.querySelectorAll("[data-act]").forEach(function (btn) {
+      btn.onclick = function () { challengeAction(card.dataset.id, btn.dataset.act); };
+    });
+  });
+}
+function challengeAction(id, act) {
+  var path = "/api/challenge/" + id + "/" + act;
+  var body = act === "decline" ? { reason: "generic" } : null;
+  apiPost(path, body).then(function () {
+    if (act !== "accept") { S.challenges.delete(id); renderDeck(); }
+    if (act === "accept") toast("Challenge accepted — game starting…", "ok");
+  }).catch(function (e) { toast("Challenge " + act + " failed: " + errText(e), "err"); });
+}
+function sendChallenge() {
+  var user = $("#chUser").value.trim();
+  if (!user) { toast("Type a username to challenge.", "err"); return; }
+  var parts = $("#chTC").value.split("|");
+  var limit = parseInt(parts[0], 10) * 60, inc = parseInt(parts[1], 10);
+  apiPost("/api/challenge/" + encodeURIComponent(user), {
+    "clock.limit": String(limit), "clock.increment": String(inc),
+    rated: String(S.rated), color: "random", variant: "standard", keepAliveStream: "true"
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (d && d.challenge) { S.challenges.set(d.challenge.id, d.challenge); renderDeck(); }
+    toast("Challenge sent to @" + user + " — waiting…", "ok");
+  }).catch(function (e) { toast("Challenge failed: " + errText(e), "err"); });
+}
+
+/* ---------------- dock actions ---------------- */
+function gameAction(path, okMsg) {
+  if (!S.gameId) return;
+  apiPost("/api/board/game/" + S.gameId + path).then(function () { toast(okMsg || "Done.", "ok"); })
+    .catch(function (e) { toast("Failed: " + errText(e), "err"); });
+}
+function updateDock() {
+  var inGame = !!S.gameId && !S.gameEnded;
+  $("#drawBtn").disabled = !inGame;
+  $("#undoBtn").disabled = !inGame;
+  $("#flipBtn").disabled = !S.gameId;
+  $("#resignBtn").disabled = !inGame;
+}
+function showConfirm(title, text, onYes) {
+  $("#confirmTitle").textContent = title;
+  $("#confirmText").textContent = text;
+  $("#confirmSheet").classList.add("show");
+  var yes = $("#confirmYes");
+  var handler = function () {
+    $("#confirmSheet").classList.remove("show");
+    yes.removeEventListener("click", handler);
+    onYes();
+  };
+  yes.addEventListener("click", handler);
+  $("#confirmNo").onclick = function () { $("#confirmSheet").classList.remove("show"); yes.removeEventListener("click", handler); };
+}
+
+/* ---------------- tabs ---------------- */
+function showTab(name) {
+  ["Game", "Chat", "Details"].forEach(function (n) {
+    $("#tab" + n).classList.toggle("on", n === name);
+    $("#panel" + n).classList.toggle("hide", n !== name);
+  });
+  if (name === "Chat") { S.chatUnread = 0; $("#chatBadge").classList.add("hide"); }
+}
+
+/* ---------------- wiring ---------------- */
+function init() {
+  buildBoard();
+  renderPieces();
+  markSquares();
+  renderMoves();
+  S.sound = load("op_sound_v1", true);
+  $("#soundBtn").classList.toggle("on", S.sound);
+  S.lastTC = load("op_tc_v1", { time: 5, inc: 3 });
+  S.rated = load("op_rated_v1", true);
+  $("#ratedToggle").classList.toggle("on", S.rated);
+  $$("#chips .chip").forEach(function (c) {
+    var tc = { time: parseInt(c.dataset.time, 10), inc: parseInt(c.dataset.inc, 10) };
+    c.classList.toggle("on", tc.time === S.lastTC.time && tc.inc === S.lastTC.inc);
+    c.onclick = function () {
+      S.lastTC = tc; save("op_tc_v1", tc);
+      $$("#chips .chip").forEach(function (x) { x.classList.remove("on"); });
+      c.classList.add("on");
+    };
+  });
+  $("#ratedToggle").onclick = function () {
+    S.rated = !S.rated; save("op_rated_v1", S.rated);
+    $("#ratedToggle").classList.toggle("on", S.rated);
+  };
+  $("#soundBtn").onclick = function () {
+    S.sound = !S.sound; save("op_sound_v1", S.sound);
+    $("#soundBtn").classList.toggle("on", S.sound);
+    if (S.sound) sndMove();
+  };
+  $("#connectBtn").onclick = function () {
+    var user = $("#inUser").value.trim();
+    var token = $("#inToken").value.trim();
+    if (!user || !token) { $("#connStatus").className = "status err"; $("#connStatus").textContent = "Enter your username and token."; return; }
+    $("#connStatus").className = "status"; $("#connStatus").textContent = "Connecting…";
+    validateAndConnect(token, user, false).catch(function () {});
+  };
+  $("#disconnectBtn").onclick = disconnect;
+  $("#playBtn").onclick = function () { if (S.seeking) cancelSeek(); else startSeek(); };
+  $("#challengeBtn").onclick = sendChallenge;
+  $("#drawBtn").onclick = function () { gameAction("/draw/yes", "Draw offered."); };
+  $("#undoBtn").onclick = function () { gameAction("/takeback/yes", "Takeback requested."); };
+  $("#flipBtn").onclick = function () { S.orient = S.orient === "white" ? "black" : "white"; buildBoard(); renderPieces(); markSquares(); };
+  $("#resignBtn").onclick = function () {
+    showConfirm("Resign the game?", "This ends the game now and counts as a loss.", function () { gameAction("/resign", "You resigned."); });
+  };
+  $("#tabGame").onclick = function () { showTab("Game"); };
+  $("#tabChat").onclick = function () { showTab("Chat"); };
+  $("#tabDetails").onclick = function () { showTab("Details"); };
+  $("#chatSend").onclick = sendChat;
+  $("#chatInput").addEventListener("keydown", function (e) { if (e.key === "Enter") sendChat(); });
+  $("#replayBtn").onclick = function () { toast("Replay is coming in Phase 2.", "ok"); };
+  $("#analyzeBtn").onclick = function () { toast("Analyze is coming in Phase 2 — the Engine Lab.", "ok"); };
+  $("#playAgainBtn").onclick = function () {
+    $("#endOverlay").classList.remove("show");
+    S.gameId = null; S.game = null; S.gameEnded = false;
+    $("#gameView").style.display = "none";
+    $("#homeView").classList.remove("hide");
+    refreshOngoing();
+    startSeek();
+  };
+  $("#endHomeBtn").onclick = function () {
+    $("#endOverlay").classList.remove("show");
+    S.gameId = null; S.game = null; S.gameEnded = false;
+    $("#gameView").style.display = "none";
+    $("#homeView").classList.remove("hide");
+    refreshOngoing();
+  };
+  $$("#promoBtns button").forEach(function (b) {
+    b.onclick = function () {
+      $("#promoSheet").classList.remove("show");
+      var p = S.promoPending; S.promoPending = null;
+      if (p) doMove(p.from, p.to, b.dataset.p, false);
+    };
+  });
+  $("#promoSheet").addEventListener("click", function (e) {
+    if (e.target === this) { this.classList.remove("show"); S.promoPending = null; }
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.code === "Space" && S.token && !S.gameId && !S.seeking && $("#homeView").classList.contains("hide") === false) {
+      if (document.activeElement && (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "SELECT")) return;
+      e.preventDefault(); startSeek();
+    }
+  });
+  // restore session
+  var tok = load("op_token_v1", null);
+  var usr = load("op_user_v1", null);
+  if (tok && usr) {
+    $("#inUser").value = usr;
+    $("#inToken").value = tok;
+    validateAndConnect(tok, usr, true).catch(function () { setConnectedUI(false); });
+  } else {
+    setConnectedUI(false);
+  }
+  if ("serviceWorker" in navigator) { navigator.serviceWorker.register("sw.js").catch(function () {}); }
+  updatePlayBtn();
+  renderDeck();
+}
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
