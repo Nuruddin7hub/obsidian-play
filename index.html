@@ -1556,7 +1556,11 @@
   var NAV=[["hero","navGames"],["weekSection","navWeek"],["puzzleSection","navPuzzles"],["gamesSection","navArena"],["srsSection","navReview"],["tokenBox","navToken"]];
   function navSpy(){
     var cur=NAV[0][1];
-    var mid=window.scrollY+window.innerHeight*0.35;
+    // The "current" section is the last one whose top has passed a line
+    // 120px down the screen — i.e. the section you are actually looking
+    // at. A mid-screen line switched too early: the short locked Review
+    // section handed over to Token before Review even reached the top.
+    var mid=window.scrollY+120;
     NAV.forEach(function(pair){
       var el=document.getElementById(pair[0]);
       if(!el || el.offsetParent===null) return; // hidden section — skip it
