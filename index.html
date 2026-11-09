@@ -212,6 +212,13 @@
   .bottomnav a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 0 8px;color:var(--muted);text-decoration:none;font-size:11.5px;letter-spacing:.03em;border-top:2px solid transparent;min-width:0}
   .bottomnav a i{font-style:normal;font-size:17px;line-height:1.2}
   .bottomnav a.on{color:var(--gold);border-top-color:var(--gold)}
+  /* puzzle mastery radar web */
+  .radar-wrap{display:grid;grid-template-columns:1.15fr 1fr;gap:18px;align-items:center}
+  @media(max-width:900px){.radar-wrap{grid-template-columns:1fr}}
+  .radar-stats{display:flex;gap:22px;flex-wrap:wrap}
+  .radar-stats .big{font-size:44px;font-weight:800;line-height:1}
+  .radar-stats .lab{color:var(--muted);font-size:13px;margin-top:4px}
+  .radar-note{color:var(--muted);font-size:13.5px;margin:12px 0 0;line-height:1.5}
   .hidden{display:none!important}
 </style>
 </head>
@@ -374,6 +381,24 @@
     <p style="color:var(--muted);font-size:13px;margin:10px 0 0">Week = Friday to Wednesday. Thursday is bonus only, not counted in the week.</p>
   </section>
 
+  <!-- PUZZLE MASTERY — radar web, right below the puzzles week -->
+  <section class="arena show" id="masterySection">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+        <h3 style="font-size:26px;margin:0">Puzzle mastery</h3>
+        <span style="font-size:13px;color:var(--muted)">Last 30 days</span>
+      </div>
+      <p class="desc" id="radarDesc">Connect the token below to see your puzzle mastery web — one spoke per theme, from your last 30 days on Lichess.</p>
+      <div class="radar-wrap">
+        <div id="radarBox"></div>
+        <div>
+          <div class="radar-stats" id="radarStats"></div>
+          <p class="radar-note" id="radarNote"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- GAMES ARENA -->
   <section class="arena" id="gamesSection">
     <div class="sec-head">
@@ -481,6 +506,7 @@
       <a href="#hero" id="navGames"><i>♞</i>Games</a>
       <a href="#weekSection" id="navWeek"><i>📅</i>Week</a>
       <a href="#puzzleSection" id="navPuzzles"><i>🧩</i>Puzzles</a>
+      <a href="#masterySection" id="navMastery"><i>🕸️</i>Mastery</a>
       <a href="#gamesSection" id="navArena"><i>⚔️</i>Arena</a>
       <a href="#srsSection" id="navReview"><i>⭐</i>Review</a>
       <a href="#tokenBox" id="navToken"><i>🔑</i>Token</a>
@@ -1015,10 +1041,11 @@
     if(!state.token || state.deepBusy) return;
     var rb=$("deepRetry"); if(rb) rb.classList.remove("hidden");
     state.deepBusy=true; state.lastDeep=Date.now();
+    var pending=2;
     var errs=[];
     var hardVerdict=null;
     function done(){
-      state.deepBusy=false;
+      pending--; if(pending>0) return; pending=0; state.deepBusy=false;
       if(!errs.length){
         $("tokenError").style.display="none";
         state.deepLoaded=true;
@@ -1041,8 +1068,24 @@
       if(manual || state.deepRetries===0) showTokenError(errs[0]);
       scheduleDeepRetry();
     }
-    // puzzle activity stream (NDJSON) — the only token-gated call.
-    // It proves puzzle:read by itself: 401 = token unknown, 403 = scope missing.
+    // 30-day dashboard — feeds the Puzzle mastery web (radar).
+    lichessFetch("https://lichess.org/api/puzzle/dashboard/30",{headers:{"Accept":"application/json","Authorization":"Bearer "+state.token}})
+      .then(function(r){ return r.text().then(function(txt){ if(!r.ok) throw deepErr(r.status, txt, "The 30-day dashboard did not load"); return JSON.parse(txt); }); })
+      .then(function(d){
+        var g=d.global||{};
+        /* Lichess returns themes as an object keyed by theme id — {fork:{theme:"Fork",results:{nb,firstWins,…}}} — not an array, so normalise before sorting */
+        var rawThemes=d.themes||[];
+        var themeArr=Array.isArray(rawThemes) ? rawThemes.slice() : Object.keys(rawThemes).map(function(k){ var v=rawThemes[k]||{}; return {theme:v.theme||k, results:v.results||v}; });
+        var themes=themeArr.sort(function(a,b){ return ((b.results&&b.results.nb)||0)-((a.results&&a.results.nb)||0); }).slice(0,8);
+        renderRadar(themes, g);
+      }).catch(function(e){
+        if(e && e.status){ if(e.kind==="invalid"||e.kind==="scope") hardVerdict=e; errs.push(e.message+"."); }
+        else errs.push("The 30-day dashboard did not load — "+((e&&e.message)?e.message:"the request did not get through")+".");
+      })
+      .then(done);
+    // puzzle activity stream (NDJSON) — one of two token-gated calls
+    // (the other is the 30-day dashboard above). It proves puzzle:read
+    // by itself: 401 = token unknown, 403 = scope missing.
     lichessFetch("https://lichess.org/api/puzzle/activity?max=1000&since="+(Date.now()-14*86400000),{headers:{"Accept":"application/x-ndjson","Authorization":"Bearer "+state.token}, timeoutMs:60000})
       .then(function(r){ return r.text().then(function(txt){ if(!r.ok) throw deepErr(r.status, txt, "Your puzzle activity did not load"); return txt; }); })
       .then(function(txt){
@@ -1322,6 +1365,52 @@
     $("pzWeekThisBar").style.width="0%"; $("pzWeekLastBar").style.width="0%";
     var ln=$("pzLockedNote"); if(ln) ln.style.display="";
   }
+  /* Puzzle mastery radar web (Lichess-style): one spoke per theme,
+     spoke length = theme performance over the last 30 days. The
+     shortest spoke (red dot) is the next training target. */
+  function renderRadar(themes, g){
+    var box=$("radarBox"); if(!box) return;
+    var stats=$("radarStats"), note=$("radarNote");
+    var list=(themes||[]).filter(function(t){ var r=t.results||t; return (r.performance!=null||r.puzzleRatingAvg!=null) && (r.nb||0)>0; });
+    var n0=8, cx=200, cy=200, R=150;
+    var pt=function(n,i,f){ var a=-Math.PI/2+i*2*Math.PI/n; return [cx+Math.cos(a)*R*f, cy+Math.sin(a)*R*f]; };
+    var web=function(n){ var out="";
+      [0.25,0.5,0.75,1].forEach(function(f){ var poly=[]; for(var i=0;i<n;i++){ var q=pt(n,i,f); poly.push(q[0].toFixed(1)+","+q[1].toFixed(1)); } out+='<polygon points="'+poly.join(" ")+'" fill="none" stroke="var(--line)" stroke-width="1"/>'; });
+      for(var i=0;i<n;i++){ var q=pt(n,i,1); out+='<line x1="'+cx+'" y1="'+cy+'" x2="'+q[0].toFixed(1)+'" y2="'+q[1].toFixed(1)+'" stroke="var(--line)" stroke-width="1"/>'; }
+      return out; };
+    if(!list.length){
+      /* Placeholder web — same shape, no data yet (token not connected) */
+      box.innerHTML='<svg viewBox="0 0 400 400" role="img" aria-label="Puzzle mastery web — connect the token to fill it in">'+web(n0)+'</svg>';
+      if(stats) stats.innerHTML="";
+      if(note) note.textContent="";
+      return;
+    }
+    var pretty=function(raw){ var nm=String(raw||"Theme"); nm=nm.indexOf(" ")>=0?nm:nm.replace(/([a-z0-9])([A-Z])/g,"$1 $2"); return nm.charAt(0).toUpperCase()+nm.slice(1); };
+    var vals=list.map(function(t){ var r=t.results||t; return r.performance!=null?r.performance:(r.puzzleRatingAvg||0); });
+    var lo=Math.min.apply(null,vals), hi=Math.max.apply(null,vals);
+    var pad=(hi-lo)*0.2||50, sLo=lo-pad, sHi=hi+pad, n=list.length;
+    var frac=function(v){ return 0.12+0.83*((v-sLo)/(sHi-sLo)); };
+    var ringLabels=[0.25,0.5,0.75,1].map(function(f){ return '<text x="'+(cx+4)+'" y="'+(cy-R*f+4)+'" font-size="10" fill="var(--faint)">'+Math.round(sLo+(sHi-sLo)*f)+'</text>'; }).join("");
+    var polyPts=list.map(function(t,i){ var q=pt(n,i,frac(vals[i])); return q[0].toFixed(1)+","+q[1].toFixed(1); }).join(" ");
+    var weakest=0; for(var i=1;i<vals.length;i++){ if(vals[i]<vals[weakest]) weakest=i; }
+    var dots=list.map(function(t,i){ var q=pt(n,i,frac(vals[i])); var col=i===weakest?"var(--red)":"var(--gold)"; return '<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="5" fill="'+col+'" stroke="var(--bg)" stroke-width="2"/>'; }).join("");
+    var labels=list.map(function(t,i){ var q=pt(n,i,1.18); var lx=Math.max(56,Math.min(344,q[0])), ly=Math.max(16,Math.min(390,q[1]));
+      return '<text x="'+lx.toFixed(1)+'" y="'+(ly-4).toFixed(1)+'" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ink)">'+pretty(t.theme)+'</text>'
+      +'<text x="'+lx.toFixed(1)+'" y="'+(ly+11).toFixed(1)+'" text-anchor="middle" font-size="11" fill="var(--muted)">'+fmt(vals[i])+'</text>'; }).join("");
+    box.innerHTML='<svg viewBox="0 0 400 400" role="img" aria-label="Puzzle mastery web">'+web(n)+ringLabels+'<polygon points="'+polyPts+'" fill="var(--gold)" fill-opacity="0.22" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round"/>'+dots+labels+'</svg>';
+    if(g){
+      var gw=(g.firstWins!=null?g.firstWins:(g.wins||0));
+      var wr=g.nb?Math.round(gw/g.nb*100):null;
+      var toReplay=Math.max(0,(g.nb||0)-gw-(g.replayWins||0));
+      if(stats) stats.innerHTML='<div><div class="big">'+fmt(g.performance||null)+'</div><div class="lab">Performance</div></div>'
+        +'<div><div class="big">'+fmt(g.nb)+'</div><div class="lab">Played</div></div>'
+        +'<div><div class="big">'+(wr==null?"—":wr+"%")+'</div><div class="lab">Solved</div></div>'
+        +'<div style="flex-basis:100%;margin-top:6px"><span style="font-size:15px;font-weight:700;color:var(--ink)">▶ '+fmt(toReplay)+' to replay</span></div>';
+      var desc=$("radarDesc"); if(desc) desc.textContent="Your theme performance over the last 30 days — the longer the spoke, the stronger the theme.";
+      var wr0=list[weakest].results||list[weakest]; var wnb=wr0.nb||0, ww=(wr0.firstWins!=null?wr0.firstWins:(wr0.wins||0)); var wp=wnb?Math.round(ww/wnb*100):0;
+      if(note) note.innerHTML='Shortest spoke: <b style="color:var(--ink)">'+pretty(list[weakest].theme)+'</b> — '+wp+'% first-try · your next training target.';
+    }
+  }
   function showUserError(m){ var e=$("userError"); e.textContent=m; e.style.display="block"; }
   function showTokenError(m){ var e=$("tokenError"); e.textContent=m; e.style.display="block"; }
 
@@ -1390,7 +1479,7 @@
   });
   $("changeUserBtn").addEventListener("click", function(){
     if(state.timer) clearInterval(state.timer);
-    state.user=null; state.prevTotal=null; state.sessionSolved=0; state.todayExact=null; state.prevGames=null; state.gameFeed=[]; state.winStreak=0; state.dayStreak=0; state.actLoaded=false; state.perfLoaded=false; $("activityList").innerHTML='<p class="desc" style="margin-top:10px">Loading your recent days…</p>'; renderWeek(); resetPuzzleSection();
+    state.user=null; state.prevTotal=null; state.sessionSolved=0; state.todayExact=null; state.prevGames=null; state.gameFeed=[]; state.winStreak=0; state.dayStreak=0; state.actLoaded=false; state.perfLoaded=false; $("activityList").innerHTML='<p class="desc" style="margin-top:10px">Loading your recent days…</p>'; renderWeek(); resetPuzzleSection(); renderRadar(null);
     $("hero").classList.remove("show"); $("tiles").classList.remove("show"); $("grid2").classList.remove("show"); $("gamesSection").classList.remove("show");
     $("connectCard").style.display="block"; $("liveDot").classList.remove("on"); $("liveText").textContent="Not connected yet";
   });
@@ -1499,6 +1588,7 @@
     $("srsLocked").classList.remove("hidden"); $("srsLive").classList.add("hidden");
     $("srsDueList").innerHTML=""; $("srsWrongList").innerHTML=""; $("srsDueCount").textContent="0"; $("srsSummary").textContent=""; $("srsAutoNote").style.display="none";
     resetPuzzleSection();
+    renderRadar(null); $("radarDesc").textContent="Connect the token below to see your puzzle mastery web — one spoke per theme, from your last 30 days on Lichess.";
     if(state.profile) applyProfile(state.profile,false);
     toast("Token disconnected — this page has forgotten it. Your puzzle review progress stays saved on this phone.");
   });
@@ -1550,10 +1640,11 @@
 
   srsLoad();
   renderWeek();
+  renderRadar(null); // empty placeholder web until the token connects
   /* Bottom nav scroll spy — highlights the section you are looking at.
      The anchor links themselves do the smooth jump (html has
      scroll-behavior:smooth); this only moves the gold highlight. */
-  var NAV=[["hero","navGames"],["weekSection","navWeek"],["puzzleSection","navPuzzles"],["gamesSection","navArena"],["srsSection","navReview"],["tokenBox","navToken"]];
+  var NAV=[["hero","navGames"],["weekSection","navWeek"],["puzzleSection","navPuzzles"],["masterySection","navMastery"],["gamesSection","navArena"],["srsSection","navReview"],["tokenBox","navToken"]];
   function navSpy(){
     var cur=NAV[0][1];
     // The "current" section is the last one whose top has passed a line
