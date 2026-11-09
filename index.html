@@ -202,8 +202,16 @@
   /* CONNECTION TEST PANEL */
 
   .foot{margin-top:26px;color:var(--faint);font-size:12.5px;line-height:1.6;text-align:center}
-  .toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,80px);background:var(--ink);color:var(--bg);font-weight:700;padding:13px 20px;border-radius:999px;box-shadow:var(--shadow);transition:.35s;z-index:50;font-size:15px;max-width:92vw;text-align:center}
+  .toast{position:fixed;left:50%;bottom:92px;transform:translate(-50%,80px);background:var(--ink);color:var(--bg);font-weight:700;padding:13px 20px;border-radius:999px;box-shadow:var(--shadow);transition:.35s;z-index:50;font-size:15px;max-width:92vw;text-align:center}
   .toast.show{transform:translate(-50%,0)}
+  /* Bottom nav — one-tap jumps to any section. Fixed, thumb-friendly,
+     and the page gets bottom padding so it never covers the footer. */
+  body{padding-bottom:92px}
+  .bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(22,19,17,.93);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+  .bottomnav .row{max-width:640px;margin:0 auto;display:flex}
+  .bottomnav a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 0 8px;color:var(--muted);text-decoration:none;font-size:11.5px;letter-spacing:.03em;border-top:2px solid transparent;min-width:0}
+  .bottomnav a i{font-style:normal;font-size:17px;line-height:1.2}
+  .bottomnav a.on{color:var(--gold);border-top-color:var(--gold)}
   .hidden{display:none!important}
 </style>
 </head>
@@ -467,6 +475,17 @@
 
 
   <p class="foot">Data comes live from the official Lichess API — <a href="https://lichess.org/api" target="_blank" rel="noopener">lichess.org/api</a> · Public stats: <span class="mono">/api/user</span> &amp; rating history · Games (public): <span class="mono">/api/user/{user}/perf</span> &amp; <span class="mono">/api/user/{user}/activity</span> · Private puzzle review (with your token): <span class="mono">/api/puzzle/activity</span> · Auto-refresh every 20s (Lichess has no push feed, so ~20s is true real-time here) · Bismillah — one game at a time.</p>
+
+  <nav class="bottomnav" aria-label="Sections">
+    <div class="row">
+      <a href="#hero" id="navGames"><i>♞</i>Games</a>
+      <a href="#weekSection" id="navWeek"><i>📅</i>Week</a>
+      <a href="#puzzleSection" id="navPuzzles"><i>🧩</i>Puzzles</a>
+      <a href="#gamesSection" id="navArena"><i>⚔️</i>Arena</a>
+      <a href="#srsSection" id="navReview"><i>⭐</i>Review</a>
+      <a href="#tokenBox" id="navToken"><i>🔑</i>Token</a>
+    </div>
+  </nav>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1531,6 +1550,18 @@
 
   srsLoad();
   renderWeek();
+  /* Bottom nav scroll spy — highlights the section you are looking at.
+     The anchor links themselves do the smooth jump (html has
+     scroll-behavior:smooth); this only moves the gold highlight. */
+  var NAV=[["hero","navGames"],["weekSection","navWeek"],["puzzleSection","navPuzzles"],["gamesSection","navArena"],["srsSection","navReview"],["tokenBox","navToken"]];
+  function navSpy(){
+    var cur=NAV[0][1];
+    var mid=window.scrollY+window.innerHeight*0.35;
+    NAV.forEach(function(pair){ var el=document.getElementById(pair[0]); if(el && el.offsetTop<=mid) cur=pair[1]; });
+    NAV.forEach(function(pair){ var b=document.getElementById(pair[1]); if(b) b.classList.toggle("on", pair[1]===cur); });
+  }
+  window.addEventListener("scroll", navSpy, {passive:true});
+  navSpy();
   if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
   // Default account: skypiercer_3 — verified snapshot instantly, then live fetch replaces it
   showSnapshot();
