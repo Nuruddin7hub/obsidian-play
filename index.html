@@ -2,1369 +2,1396 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="color-scheme" content="dark" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
 <link rel="icon" href="icon.svg" type="image/svg+xml" />
 <link rel="manifest" href="manifest.json" />
-<meta name="theme-color" content="#06080b" />
+<meta name="theme-color" content="#0e0c0a" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Obsidian Play" />
 <link rel="apple-touch-icon" href="icon.svg" />
-<title>Obsidian Play — a chess machine</title>
+<title>Obsidian Play — Game Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#06080b; --surface:#0d1117; --elev:#121820;
-    --ink:#f2f5f7; --muted:#7c8794; --line:rgba(255,255,255,.07);
-    --cyan:#00f0ff; --green:#58c472; --amber:#f2c063; --red:#e06c5a;
-    --sq-l:#2e3442; --sq-d:#161a22;
-    --radius:16px;
+    --bg:#0e0c0a; --bg2:#161310; --panel:#1c1915; --panel2:#24201b; --line:#332c24;
+    --ink:#f5efe6; --muted:#b8ab9a; --faint:#8a7d6d;
+    --gold:#e8a33d; --gold2:#f2c063; --brown:#b58863; --green:#7fb069; --red:#e06c5a; --teal:#5ec8b8;
+    --board-l:#ecdcc0; --board-d:#b58863;
+    --shadow:0 18px 50px rgba(0,0,0,.45);
+    --radius:20px;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f4efe7; --bg2:#efe8dc; --panel:#fffdf9; --panel2:#f7f1e6; --line:#e2d7c5;
+      --ink:#1d1812; --muted:#6d6050; --faint:#9a8c78;
+      --gold:#c47f17; --gold2:#a86f10; --brown:#9a6b44; --green:#4d7d3a; --red:#c24e3c; --teal:#1f7a6d;
+      --shadow:0 18px 40px rgba(90,70,40,.14);
+    }
   }
   *{box-sizing:border-box}
-  html,body{margin:0;padding:0}
-  body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;min-height:100dvh;overscroll-behavior:none}
-  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
-  input{font:inherit}
-  .mono{font-family:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace}
-  #app{max-width:680px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;padding:10px 12px calc(14px + env(safe-area-inset-bottom))}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Outfit",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:var(--gold)}
+  button,input{font:inherit}
+  .wrap{max-width:1120px;margin:0 auto;padding:18px 16px 56px}
+  /* header strip */
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 2px 14px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.02em}
+  .brand .knight{width:38px;height:38px;border-radius:11px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-size:22px;line-height:1}
+  .brand small{display:block;font-weight:500;color:var(--muted);font-size:12px;letter-spacing:.04em}
+  .livepill{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:13px;color:var(--muted)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+  .dot.on{background:#58c472;box-shadow:0 0 0 5px rgba(88,196,114,.18);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(88,196,114,.35)}70%{box-shadow:0 0 0 7px rgba(88,196,114,0)}100%{box-shadow:0 0 0 0 rgba(88,196,114,0)}}
+  @media (prefers-reduced-motion: reduce){.dot.on{animation:none} *{scroll-behavior:auto!important}}
 
-  /* ---------- top bar ---------- */
-  header{display:flex;align-items:center;gap:10px;padding:4px 2px 10px}
-  .logo{width:38px;height:38px;flex:none;border-radius:11px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center}
-  .logo img{width:26px;height:26px}
-  .brand{line-height:1.1;flex:1;min-width:0}
-  .brand b{font-size:17px;letter-spacing:.14em}
-  .brand span{display:block;font-size:11px;color:var(--muted);letter-spacing:.06em}
-  .pill{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 11px;font-size:12px;color:var(--muted);white-space:nowrap}
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
-  .dot.on{background:var(--green);box-shadow:0 0 0 4px rgba(88,196,114,.15)}
-  .dot.warn{background:var(--amber);box-shadow:0 0 0 4px rgba(242,192,99,.15);animation:blink 1s infinite}
-  .dot.sync{background:var(--cyan);box-shadow:0 0 0 4px rgba(0,240,255,.15);animation:blink 1s infinite}
-  .dot.bad{background:var(--red)}
-  @keyframes blink{50%{opacity:.35}}
-  .iconbtn{width:36px;height:36px;border-radius:10px;background:var(--surface);border:1px solid var(--line);font-size:17px;color:var(--muted);flex:none}
-  .iconbtn.on{color:var(--cyan);border-color:rgba(0,240,255,.4)}
+  h1,h2,h3{font-family:"Bricolage Grotesque",sans-serif;line-height:.95;margin:0}
+  .mono{font-family:"JetBrains Mono",monospace}
 
-  /* ---------- connect ---------- */
-  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
-  .connect h1{font-size:24px;margin:0 0 4px;letter-spacing:.02em}
-  .connect h1 em{font-style:normal;color:var(--cyan)}
-  .connect p{color:var(--muted);font-size:14px;line-height:1.5;margin:0 0 14px}
-  .connect p b{color:var(--ink)}
-  .field{margin-bottom:10px}
-  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;letter-spacing:.04em}
-  .field input{width:100%;background:var(--bg);border:1.5px solid var(--line);color:var(--ink);border-radius:12px;padding:12px 14px;font-size:16px;outline:none}
-  .field input:focus{border-color:var(--cyan)}
-  .field input[type=password]{font-family:ui-monospace,Menlo,Consolas,monospace}
-  .btn{display:block;width:100%;border:0;border-radius:14px;padding:15px 18px;font-weight:700;font-size:16px;background:var(--cyan);color:#03252b;letter-spacing:.02em}
+  /* CONNECT */
+  .connect{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:28px;padding:26px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .connect::after{content:"";position:absolute;inset:auto -40px -70px auto;width:260px;height:260px;opacity:.14;background:conic-gradient(from 0deg,var(--board-l) 0 25%,var(--board-d) 0 50%,var(--board-l) 0 75%,var(--board-d) 0);background-size:52px 52px;border-radius:24px;transform:rotate(12deg);pointer-events:none}
+  .connect h1{font-size:clamp(34px,6vw,58px);font-weight:800;max-width:640px}
+  .connect h1 em{font-style:normal;color:var(--gold)}
+  .connect p.lead{color:var(--muted);font-size:17px;line-height:1.55;max-width:560px;margin:14px 0 0}
+  .formrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;position:relative;z-index:1}
+  .formrow input[type=text]{flex:1 1 220px;background:var(--bg);border:1.5px solid var(--line);color:var(--ink);border-radius:14px;padding:14px 16px;font-size:17px;outline:none}
+  .formrow input[type=text]:focus{border-color:var(--gold)}
+  .btn{border:0;border-radius:14px;padding:14px 20px;font-weight:700;cursor:pointer;background:var(--gold);color:#1a1206}
   .btn:active{transform:scale(.98)}
   .btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
-  .btn.danger{background:transparent;color:var(--red);border:1.5px solid rgba(224,108,90,.4)}
-  .btn:disabled{opacity:.45}
-  .fineprint{font-size:12px;color:var(--muted);line-height:1.55;margin:12px 0 0}
-  .fineprint a{color:var(--cyan)}
-  .status{font-size:13px;margin-top:10px;min-height:18px}
-  .status.err{color:var(--red)}
-  .status.ok{color:var(--green)}
-  .scopes{font-size:12px;color:var(--muted);line-height:1.6;margin:10px 0 0}
-  .scopes code{color:var(--cyan);font-family:ui-monospace,Menlo,Consolas,monospace}
+  .btn.small{padding:9px 14px;border-radius:11px;font-size:14px}
+  .hint{font-size:13px;color:var(--faint);margin-top:10px;position:relative;z-index:1}
+  .err{display:none;margin-top:12px;background:rgba(224,108,90,.12);border:1px solid rgba(224,108,90,.4);color:var(--red);padding:11px 14px;border-radius:12px;font-size:14px;position:relative;z-index:1}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:22px;position:relative;z-index:1}
+  .step{background:var(--panel2);border:1px solid var(--line);border-radius:16px;padding:14px}
+  .step b{display:flex;align-items:center;gap:8px;font-size:14px}
+  .step b i{font-style:normal;width:22px;height:22px;border-radius:50%;background:var(--gold);color:#1a1206;display:grid;place-items:center;font-size:12px;flex:none}
+  .step p{margin:7px 0 0;color:var(--muted);font-size:13.5px;line-height:1.5}
+  @media(max-width:640px){.steps{grid-template-columns:1fr}}
 
-  /* ---------- home ---------- */
-  .hero{text-align:center;padding:18px 6px 8px}
-  .hero .knight{font-size:52px;line-height:1;color:var(--cyan);text-shadow:0 0 34px rgba(0,240,255,.35)}
-  .hero h1{font-size:clamp(30px,8vw,44px);margin:10px 0 2px;letter-spacing:.06em}
-  .hero p{color:var(--muted);font-size:14px;margin:0;letter-spacing:.05em}
-  .playbtn{width:100%;margin-top:18px;padding:20px;border-radius:18px;background:var(--cyan);color:#03252b;font-size:22px;font-weight:800;letter-spacing:.08em;box-shadow:0 10px 34px rgba(0,240,255,.22)}
-  .playbtn:active{transform:scale(.98)}
-  .playbtn:disabled{opacity:.45;box-shadow:none}
-  .chips{display:flex;gap:8px;margin-top:12px}
-  .chip{flex:1;padding:12px 4px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);font-size:15px;font-weight:700;text-align:center}
-  .chip small{display:block;font-size:11px;color:var(--muted);font-weight:500;margin-top:1px}
-  .chip.on{border-color:var(--cyan);color:var(--cyan)}
-  .chip.on small{color:var(--cyan)}
-  .rowline{display:flex;align-items:center;justify-content:space-between;margin-top:12px;font-size:13px;color:var(--muted)}
-  .toggle{position:relative;width:46px;height:26px;border-radius:999px;background:var(--elev);border:1px solid var(--line);flex:none}
-  .toggle::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--muted);transition:all .15s}
-  .toggle.on{background:rgba(0,240,255,.18);border-color:rgba(0,240,255,.5)}
-  .toggle.on::after{left:22px;background:var(--cyan)}
-  .seekline{font-size:13px;color:var(--muted);text-align:center;min-height:19px;margin-top:10px}
-  .seekline.err{color:var(--red)}
-  .seekline.ok{color:var(--cyan)}
-  .secttl{font-size:12px;letter-spacing:.14em;color:var(--muted);margin:22px 2px 8px;text-transform:uppercase}
-  .deck{display:flex;flex-direction:column;gap:8px}
-  .chcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 14px}
-  .chcard .who{font-weight:700;font-size:15px}
-  .chcard .meta{font-size:13px;color:var(--muted);margin-top:2px}
-  .chcard .acts{display:flex;gap:8px;margin-top:10px}
-  .chcard .acts .btn{padding:10px;font-size:14px}
-  .chcard .acts .btn.ghost{flex:1}
-  .empty{font-size:13px;color:var(--muted);text-align:center;padding:12px 0}
-  .ogames{display:flex;flex-direction:column;gap:8px}
-  .ogame{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
-  .ogame .vs{flex:1;min-width:0}
-  .ogame .vs b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .ogame .vs span{font-size:12px;color:var(--muted)}
-  .ogame .btn{width:auto;padding:9px 16px;font-size:14px}
-  .hint{font-size:12px;color:var(--muted);line-height:1.6;margin-top:14px;text-align:center}
-  .hint code{color:var(--cyan)}
+  /* HERO COUNTER */
+  .hero{display:none;margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow);overflow:hidden}
+  .hero.show{display:block}
+  .hero-main{padding:26px 26px 8px;display:grid;grid-template-columns:1.5fr .9fr;gap:22px}
+  @media(max-width:760px){.hero-main{grid-template-columns:1fr}}
+  .who{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .avatar{width:46px;height:46px;border-radius:14px;background:var(--gold);color:#1a1206;display:grid;place-items:center;font-family:"Bricolage Grotesque";font-weight:800;font-size:20px}
+  .who h2{font-size:24px}
+  .who p{margin:2px 0 0;color:var(--muted);font-size:13.5px}
+  .count-label{margin-top:20px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:700}
+  .bigcount{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:clamp(64px,13vw,118px);line-height:1;letter-spacing:-.03em;margin:2px 0 0}
+  .bigcount.bump{animation:bump .6s ease}
+  @keyframes bump{0%{transform:scale(1)}30%{transform:scale(1.045);color:var(--gold)}100%{transform:scale(1)}}
+  .subcount{color:var(--muted);font-size:15px;margin-top:8px;line-height:1.5}
+  .subcount strong{color:var(--ink)}
+  .pluspop{display:inline-block;background:var(--green);color:#fff;font-weight:700;border-radius:999px;padding:2px 10px;font-size:13px;margin-left:8px;opacity:0;transform:translateY(4px);transition:.3s}
+  .pluspop.show{opacity:1;transform:translateY(0)}
+  .ringbox{display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:22px;padding:18px}
+  .ringwrap{position:relative;width:148px;height:148px}
+  .ringwrap svg{transform:rotate(-90deg)}
+  .ring-c{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+  .ring-c b{font-family:"JetBrains Mono";font-size:26px;display:block}
+  .ring-c span{font-size:11.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+  .ringbox p{margin:0;color:var(--muted);font-size:13px;text-align:center;line-height:1.45}
+  .goalrow{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted)}
+  .goalrow input{width:56px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:5px 8px;text-align:center}
+  .levelbar{padding:6px 26px 24px}
+  .leveltop{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13.5px;color:var(--muted)}
+  .leveltop b{color:var(--ink)}
+  .bar{height:12px;background:var(--bg2);border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-top:9px}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--brown),var(--gold));border-radius:999px;transition:width .8s ease;width:0%}
 
-  /* ---------- arena ---------- */
-  #gameView{display:none;flex:1;flex-direction:column}
-  .player{display:flex;align-items:center;gap:10px;padding:2px 2px}
-  .avatar{width:34px;height:34px;border-radius:10px;background:var(--elev);border:1px solid var(--line);display:grid;place-items:center;font-weight:800;font-size:16px;flex:none}
-  .who{flex:1;min-width:0}
-  .who b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .who span{font-size:12px;color:var(--muted)}
-  .clock{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:26px;font-weight:700;padding:6px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--line);min-width:108px;text-align:center;letter-spacing:.02em}
-  .clock.active{border-color:rgba(0,240,255,.55);color:var(--cyan);box-shadow:0 0 18px rgba(0,240,255,.12)}
-  .clock.low{color:var(--red);border-color:rgba(224,108,90,.55)}
-  .clock.low.active{color:var(--red)}
-  .boardwrap{margin:10px auto 0;width:100%;max-width:560px}
-  .board{position:relative;width:100%;aspect-ratio:1/1;border:1px solid rgba(0,240,255,.35);border-radius:8px;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;background:var(--sq-d)}
-  .sq{position:absolute;width:12.5%;height:12.5%}
-  .sq.l{background:var(--sq-l)}
-  .sq.d{background:var(--sq-d)}
-  .sq.last{background:rgba(0,240,255,.28)}
-  .sq.sel{background:rgba(0,240,255,.4)}
-  .sq.check{background:radial-gradient(circle,rgba(224,108,90,.85) 0%,rgba(224,108,90,.25) 65%,transparent 75%)}
-  .sq .coord{position:absolute;font-size:10px;color:rgba(255,255,255,.45);pointer-events:none}
-  .sq .coord.f{left:3px;bottom:2px}
-  .sq .coord.r{right:3px;top:2px}
-  .sq.l .coord{color:rgba(0,0,0,.5)}
-  .dotm{position:absolute;left:50%;top:50%;width:30%;height:30%;transform:translate(-50%,-50%);border-radius:50%;background:rgba(0,240,255,.5);pointer-events:none}
-  .ring{position:absolute;inset:6%;border-radius:50%;border:4px solid rgba(0,240,255,.55);pointer-events:none}
-  .piece{position:absolute;width:12.5%;height:12.5%;left:0;top:0;will-change:transform;pointer-events:auto;touch-action:none;z-index:3}
-  .piece img{width:100%;height:100%;display:block;pointer-events:none}
-  .piece.drag{transition:none!important;z-index:9;pointer-events:none}
-  .piece.anim{transition:transform .18s ease}
-  .piece.captured{opacity:0;transition:opacity .18s}
-  .dock{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:12px}
-  .dock button{padding:13px 4px;border-radius:13px;background:var(--surface);border:1.5px solid var(--line);font-weight:700;font-size:14px}
-  .dock button:active{transform:scale(.97)}
-  .dock button.danger{color:var(--red);border-color:rgba(224,108,90,.4)}
-  .dock button:disabled{opacity:.4}
-  .dock button.armed{background:rgba(224,108,90,.15);border-color:var(--red)}
-  .tabs{display:flex;gap:6px;margin-top:12px}
-  .tabs button{flex:1;padding:11px;border-radius:11px;background:var(--surface);border:1px solid var(--line);font-size:13px;font-weight:700;color:var(--muted);position:relative}
-  .tabs button.on{color:var(--cyan);border-color:rgba(0,240,255,.4)}
-  .tabs button .badge{position:absolute;top:-6px;right:-4px;background:var(--red);color:#fff;font-size:11px;font-weight:800;min-width:18px;height:18px;border-radius:9px;display:grid;place-items:center;padding:0 4px}
-  .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-top:8px;padding:12px 14px;min-height:120px;max-height:220px;overflow-y:auto}
-  .moves{font-size:15px;line-height:2}
-  .moves .mn{color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;margin-right:2px}
-  .moves .mv{padding:3px 7px;border-radius:7px}
-  .moves .mv.cur{background:rgba(0,240,255,.18);color:var(--cyan)}
-  .kv{font-size:13px;color:var(--muted);line-height:1.9}
-  .kv b{color:var(--ink)}
-  .chatlog{font-size:14px;line-height:1.7}
-  .chatlog .who{color:var(--cyan);font-weight:700}
-  .chatrow{display:flex;gap:8px;margin-top:10px}
-  .chatrow input{flex:1;background:var(--bg);border:1.5px solid var(--line);color:var(--ink);border-radius:11px;padding:10px 12px;font-size:15px;outline:none}
-  .chatrow .btn{width:auto;padding:10px 18px;font-size:14px}
+  /* TILES */
+  .tiles{display:none;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}
+  .tiles.show{display:grid}
+  @media(max-width:900px){.tiles{grid-template-columns:repeat(2,1fr)}}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+  .tile .k{font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);font-weight:700;display:flex;justify-content:space-between;align-items:center}
+  .tile .v{font-family:"JetBrains Mono";font-weight:700;font-size:clamp(26px,4vw,36px);margin-top:8px;line-height:1}
+  .tile .s{color:var(--muted);font-size:13px;margin-top:7px;line-height:1.45}
+  .up{color:var(--green);font-weight:700}.down{color:var(--red);font-weight:700}
+  .flame{font-size:20px}
 
-  /* ---------- end overlay / sheets / toast ---------- */
-  #endOverlay{position:fixed;inset:0;background:rgba(3,5,8,.88);display:none;align-items:flex-end;justify-content:center;z-index:50;padding:16px}
-  #endOverlay.show{display:flex}
-  .endsheet{width:100%;max-width:520px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:26px 22px;text-align:center;animation:rise .35s ease}
-  @keyframes rise{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
-  .endsheet .res{font-size:34px;font-weight:800;letter-spacing:.04em;margin:0}
-  .endsheet .res.win{color:var(--cyan)}
-  .endsheet .res.lose{color:var(--red)}
-  .endsheet .sub{color:var(--muted);font-size:14px;margin:8px 0 0}
-  .endsheet .final{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;margin:12px 0 0;color:var(--ink)}
-  .endsheet .btn{margin-top:14px}
-  .endsheet .btnrow{display:flex;gap:8px}
-  .endsheet .btnrow .btn{flex:1}
-  .sheet{position:fixed;inset:0;background:rgba(3,5,8,.7);display:none;align-items:flex-end;justify-content:center;z-index:60;padding:0}
-  .sheet.show{display:flex}
-  .sheetbox{width:100%;max-width:520px;background:var(--elev);border:1px solid var(--line);border-bottom:0;border-radius:22px 22px 0 0;padding:20px;animation:rise .25s ease}
-  .sheetbox h3{margin:0 0 4px;font-size:18px}
-  .sheetbox p{color:var(--muted);font-size:14px;margin:0 0 14px}
-  .promo{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-  .promo button{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:14px 4px;font-size:40px;line-height:1}
-  .promo button:active{border-color:var(--cyan)}
-  .promo button span{display:block;font-size:12px;color:var(--muted);margin-top:4px}
-  .challengeform .field{margin-bottom:12px}
-  #toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom));z-index:80;display:flex;flex-direction:column;gap:8px;width:min(92vw,480px);pointer-events:none}
-  .toast{background:var(--elev);border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:rise .2s ease}
-  .toast.err{border-color:rgba(224,108,90,.5);color:#f3b8ae}
-  .toast.ok{border-color:rgba(0,240,255,.4)}
-  .hide{display:none!important}
+  /* PANELS */
+  .grid2{display:none;grid-template-columns:1.35fr 1fr;gap:12px;margin-top:12px}
+  .grid2.show{display:grid}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+  .panel h3{font-size:20px;font-weight:800}
+  .panel .desc{color:var(--muted);font-size:13.5px;margin:6px 0 0;line-height:1.5}
+  .chartbox{margin-top:14px}
+  .chartbox svg{width:100%;height:auto;display:block}
+  .axis{font-size:10.5px;fill:var(--faint);font-family:"JetBrains Mono"}
+  /* puzzle review — spaced repetition */
+  .mini{padding:6px 11px;border-radius:9px;font-size:12.5px;font-weight:700;border:1.5px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;white-space:nowrap}
+  .mini.go{border-color:var(--green);color:var(--green)}
+  .mini.no{border-color:var(--red);color:var(--red)}
+  .duechip{font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 9px;background:var(--bg2);border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+  .duechip.due{background:rgba(224,108,90,.16);border-color:rgba(224,108,90,.45);color:var(--red)}
+  .duechip.soon{background:rgba(232,163,61,.14);border-color:rgba(232,163,61,.45);color:var(--gold)}
+  .attempts{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px;max-height:308px;overflow:auto}
+  .attempts li{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:13.5px}
+  .attempts .res{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-weight:800;flex:none;font-size:13px}
+  .win{background:rgba(127,176,105,.2);color:var(--green)} .loss{background:rgba(224,108,90,.16);color:var(--red)}
+  .attempts .meta{color:var(--muted);font-size:12.5px}
+  .attempts a{margin-left:auto;font-size:12.5px;white-space:nowrap}
 
-  /* ---------- desktop ---------- */
-  @media (min-width:900px){
-    #app{max-width:1080px;padding:16px 24px 32px}
-    .desk{display:flex;gap:24px;align-items:flex-start}
-    .desk .arena{flex:1;max-width:640px;margin:0 auto}
-    .desk .side{width:320px;flex:none;position:sticky;top:16px}
-    .desk .side .panel{max-height:420px}
-    .boardwrap{max-width:640px}
-    .clock{font-size:30px;min-width:120px}
-  }
+  /* achievements */
+  .badges{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:14px}
+  @media(max-width:560px){.badges{grid-template-columns:repeat(2,1fr)}}
+  .badge{border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--panel2);opacity:.45}
+  .badge.got{opacity:1;border-color:var(--gold)}
+  .badge .ic{font-size:22px}
+  .badge b{display:block;font-size:13.5px;margin-top:5px}
+  .badge span{font-size:12px;color:var(--muted)}
+
+  /* GAMES ARENA + MODES */
+  .arena{display:none;margin-top:14px}
+  .arena.show{display:block}
+  .sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:2px 2px 10px}
+  .sec-head h3{font-size:26px;font-weight:800}
+  .sec-head p{color:var(--muted);font-size:13.5px;margin:5px 0 0;line-height:1.5;max-width:620px}
+  .arena-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:12px}
+  @media(max-width:900px){.arena-grid{grid-template-columns:1fr}}
+  .speedrow{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .speedrow:last-child{border-bottom:0;padding-bottom:2px}
+  .speedrow .nm{flex:0 0 112px}
+  .speedrow .nm b{display:block;font-size:15.5px}
+  .speedrow .nm span{font-size:12px;color:var(--faint)}
+  .speedrow .rt{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:27px;min-width:70px;line-height:1}
+  .speedrow .rtrack{flex:1 1 90px;height:8px;background:var(--bg2);border:1px solid var(--line);border-radius:99px;overflow:hidden;min-width:80px}
+  .speedrow .rtrack i{display:block;height:100%;background:linear-gradient(90deg,var(--brown),var(--gold))}
+  .speedrow .meta{text-align:right;font-size:12.5px;color:var(--muted);line-height:1.55;min-width:104px}
+  .speedrow .meta b{color:var(--ink);font-family:"JetBrains Mono",monospace}
+  @media(max-width:560px){.speedrow .meta{text-align:left}}
+  .wld{display:flex;height:16px;border-radius:99px;overflow:hidden;border:1px solid var(--line);margin-top:14px;background:var(--bg2)}
+  .wld i{display:block;height:100%}
+  .wld .w{background:var(--green)} .wld .l{background:var(--red)} .wld .d{background:var(--faint)}
+  .wld-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:9px}
+  .wld-legend b{font-family:"JetBrains Mono",monospace;color:var(--ink)}
+  .kv{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .kv:last-child{border-bottom:0}
+  .kv span{color:var(--muted)} .kv b{font-family:"JetBrains Mono",monospace;text-align:right}
+  .perfdetails{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+  @media(max-width:900px){.perfdetails{grid-template-columns:1fr}}
+  .actrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .actrow:last-child{border-bottom:0}
+  .actrow .day{flex:0 0 86px;font-weight:700;font-size:13px}
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+  .chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:12.5px;color:var(--muted)}
+  .chip b{color:var(--ink)}
+
+  /* token box */
+  .tokenbox{margin-top:12px;background:var(--panel);border:1.5px dashed var(--line);border-radius:var(--radius);padding:20px}
+  .tokenbox h3{font-size:19px}
+  .tokenbox ol{margin:10px 0;color:var(--muted);font-size:14px;line-height:1.65;padding-left:20px}
+  .tokenbox code{background:var(--bg2);border:1px solid var(--line);padding:1px 6px;border-radius:6px;font-size:12.5px}
+  .tokenrow{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+  .tokenrow input{flex:1 1 240px;background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--ink)}
+  .locked-note{color:var(--muted);font-size:13.5px;line-height:1.55}
+  .tokstat{margin-top:12px;background:rgba(127,176,105,.13);border:1px solid rgba(127,176,105,.45);color:var(--ink);padding:11px 14px;border-radius:12px;font-size:14px;line-height:1.55}
+  .tokstat code{background:var(--bg2);border:1px solid var(--line);padding:1px 6px;border-radius:6px;font-size:12.5px}
+  @media(max-width:640px){#deepTiles{grid-template-columns:repeat(2,1fr)!important}}
+
+  /* CONNECTION TEST PANEL */
+
+  .foot{margin-top:26px;color:var(--faint);font-size:12.5px;line-height:1.6;text-align:center}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,80px);background:var(--ink);color:var(--bg);font-weight:700;padding:13px 20px;border-radius:999px;box-shadow:var(--shadow);transition:.35s;z-index:50;font-size:15px;max-width:92vw;text-align:center}
+  .toast.show{transform:translate(-50%,0)}
+  .hidden{display:none!important}
 </style>
 </head>
 <body>
-<div id="app">
-  <header>
-    <div class="logo"><img src="pieces/bN.svg" alt="knight"></div>
-    <div class="brand"><b>OBSIDIAN PLAY</b><span>THIS IS NOT A CHESS WEBSITE. IT'S A CHESS MACHINE.</span></div>
-    <div class="pill" id="connPill"><span class="dot" id="connDot"></span><span id="connText">OFFLINE</span></div>
-    <button class="iconbtn" id="soundBtn" title="Sound on/off">♪</button>
-  </header>
+<div class="wrap">
 
-  <!-- ============ CONNECT ============ -->
-  <section class="card connect" id="connectCard">
-    <h1>Play Lichess, <em>your way.</em></h1>
-    <p>Connect your own Lichess account and play real games on this board.
-    Your token is saved only on this device and sent only to lichess.org.</p>
-    <div class="field"><label>LICHESS USERNAME</label><input id="inUser" type="text" placeholder="e.g. yourusername" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
-    <div class="field"><label>PERSONAL ACCESS TOKEN</label><input id="inToken" type="password" placeholder="lip_…" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
-    <button class="btn" id="connectBtn">CONNECT</button>
-    <div class="status" id="connStatus"></div>
-    <p class="fineprint">Create a token at <a href="https://lichess.org/account/oauth/token" target="_blank" rel="noopener">lichess.org/account/oauth/token</a> — tick <b>board:play</b>, <b>challenge:read</b> and <b>challenge:write</b>. Nothing else is needed for Phase 1. The token is like a password: never share it, never paste it anywhere except here.</p>
-    <p class="scopes">Phase 1 uses: <code>board:play</code> · <code>challenge:read</code> · <code>challenge:write</code></p>
+  <div class="topbar">
+    <div class="brand"><span class="knight">♞</span><span>Obsidian Play<small>YOUR GAMES, COUNTED LIVE</small></span></div>
+    <div class="livepill"><span class="dot" id="liveDot"></span><span id="liveText">Not connected yet</span></div>
+  </div>
+
+  <!-- CONNECT -->
+  <section class="connect" id="connectCard">
+    <h1>Every game you play, <em>counted automatically.</em></h1>
+    <p class="lead">Already set to your account — <strong>skypiercer_3</strong> — so your live counter loads the moment this page opens. This page reads your public game stats straight from Lichess and re-checks every 20 seconds — play a game in the Lichess app or website, and watch the counter climb here. No tapping, no manual updates.</p>
+    <form class="formrow" id="userForm">
+      <input type="text" id="usernameInput" value="skypiercer_3" placeholder="Your Lichess username — e.g. skypiercer_3" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Lichess username">
+      <button class="btn" type="submit" id="connectBtn">Start tracking →</button>
+    </form>
+    <div class="err" id="userError"></div>
+    <p class="hint">Exactly as it appears on lichess.org, without the @ — not case-sensitive. Change it here anytime to track a different account. Only the username is needed for the live counter, ratings and games. The puzzle review (wrong puzzles, spaced repetition) unlocks with an optional token below.</p>
+    <div class="steps">
+      <div class="step"><b><i>1</i> Enter username</b><p>We fetch your total games, game ratings (bullet, blitz, rapid) and your recent battle days — all from the public Lichess API.</p></div>
+      <div class="step"><b><i>2</i> Play anywhere</b><p>Play games on lichess.org or the Lichess phone app — same account, every mode counts.</p></div>
+      <div class="step"><b><i>3</i> Watch it climb</b><p>Auto-refresh every 20 seconds. A finished game pops the counter, your goal ring and your streak.</p></div>
+    </div>
   </section>
 
-  <!-- ============ HOME ============ -->
-  <section id="homeView" class="hide">
-    <div class="hero">
-      <div class="knight">♞</div>
-      <h1>OBSIDIAN PLAY</h1>
-      <p>OPEN · MATCH · PLAY · FINISH · UNDERSTAND · PLAY AGAIN</p>
-    </div>
-    <button class="playbtn" id="playBtn">▶&nbsp; PLAY</button>
-    <div class="chips" id="chips">
-      <button class="chip" data-time="1" data-inc="0">1+0<small>Bullet</small></button>
-      <button class="chip" data-time="3" data-inc="2">3+2<small>Blitz</small></button>
-      <button class="chip on" data-time="5" data-inc="3">5+3<small>Blitz</small></button>
-      <button class="chip" data-time="10" data-inc="0">10+0<small>Rapid</small></button>
-    </div>
-    <div class="rowline"><span>Rated game</span><button class="toggle on" id="ratedToggle" aria-label="Rated toggle"></button></div>
-    <div class="seekline" id="seekLine"></div>
-    <div class="secttl">Challenge a player</div>
-    <div class="card challengeform">
-      <div class="field"><label>USERNAME</label><input id="chUser" type="text" placeholder="e.g. a friend's username" autocapitalize="off" spellcheck="false"></div>
-      <div class="field"><label>TIME CONTROL</label>
-        <select id="chTC" style="width:100%;background:var(--bg);border:1.5px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:15px">
-          <option value="1|0">1+0 Bullet</option>
-          <option value="3|2">3+2 Blitz</option>
-          <option value="5|3" selected>5+3 Blitz</option>
-          <option value="10|0">10+0 Rapid</option>
-          <option value="15|10">15+10 Rapid</option>
-        </select>
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <div class="hero-main">
+      <div>
+        <div class="who">
+          <div class="avatar" id="avatarLetter">?</div>
+          <div><h2 id="whoName">—</h2><p id="whoMeta">—</p></div>
+          <button class="btn ghost small" id="changeUserBtn" type="button">Change user</button>
+          <button class="btn ghost small" id="refreshBtn" type="button">↻ Refresh now</button>
+          <button class="btn ghost small" id="deepRetryTop" type="button">↻ Retry puzzle review</button>
+        </div>
+        <div class="count-label">Total games played — live</div>
+        <div class="bigcount" id="bigCount">0</div>
+        <p class="subcount" id="subCount">Connecting to Lichess…</p>
       </div>
-      <button class="btn ghost" id="challengeBtn">SEND CHALLENGE</button>
+      <div class="ringbox">
+        <div class="ringwrap">
+          <svg width="148" height="148" viewBox="0 0 148 148"><circle cx="74" cy="74" r="64" fill="none" stroke="var(--line)" stroke-width="11"/><circle id="ringFg" cx="74" cy="74" r="64" fill="none" stroke="var(--gold)" stroke-width="11" stroke-linecap="round" stroke-dasharray="402" stroke-dashoffset="402"/></svg>
+          <div class="ring-c"><div><b id="ringNum">–</b><span>today</span></div></div>
+        </div>
+        <p id="ringText">Daily goal ring fills as today's games are counted.</p>
+        <label class="goalrow">Daily goal <input type="number" id="goalInput" min="1" max="500" value="5"> games</label>
+      </div>
     </div>
-    <div class="secttl">Challenge deck</div>
-    <div class="deck" id="deck"><div class="empty">No challenges right now.</div></div>
-    <div class="secttl">Your games</div>
-    <div class="ogames" id="ogames"><div class="empty">No games in progress.</div></div>
-    <p class="hint">Board seeks on Lichess are Rapid and slower — if a Bullet or Blitz seek is refused, Lichess's exact message will appear under PLAY. Direct challenges accept any time control.</p>
-    <p class="hint" style="margin-top:6px"><button class="btn ghost" id="disconnectBtn" style="padding:10px;font-size:14px">Disconnect — forget token on this device</button></p>
+    <div class="levelbar">
+      <div class="leveltop"><span id="levelName"><b>Level —</b></span><span id="levelNext">—</span></div>
+      <div class="bar"><i id="levelFill"></i></div>
+    </div>
   </section>
 
-  <!-- ============ ARENA ============ -->
-  <section id="gameView">
-    <div class="desk">
-      <div class="arena">
-        <div class="player">
-          <div class="avatar" id="oppAv">?</div>
-          <div class="who"><b id="oppName">Opponent</b><span id="oppMeta">—</span></div>
-          <div class="clock" id="oppClock">--:--</div>
+  <!-- TILES -->
+  <div class="tiles" id="tiles">
+    <div class="tile"><div class="k">Games today <span class="flame" id="flameIc"></span></div><div class="v" id="tToday">—</div><div class="s" id="tTodaySub">Games played today, any mode — from your public activity feed, no token needed.</div></div>
+    <div class="tile"><div class="k">Win rate (recent)</div><div class="v" id="tWinRate">—</div><div class="s" id="tWinRateSub">Across your recent active days.</div></div>
+    <div class="tile"><div class="k">Current win streak</div><div class="v" id="tWinStreak">—</div><div class="s" id="tWinStreakSub">Consecutive winning games, newest first.</div></div>
+    <div class="tile"><div class="k">Day streak</div><div class="v" id="tDayStreak">—</div><div class="s" id="tDayStreakSub">Days in a row with at least one game.</div></div>
+  </div>
+
+  <!-- WEEK — Fri to Wed, Thursday is bonus only -->
+  <section class="arena show" id="weekSection">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+      <h3 style="font-size:26px;margin:0">This week, at a glance</h3>
+      <span id="weekVs" style="font-size:15px;color:var(--muted)"></span>
+    </div>
+    <div style="display:grid;grid-template-columns:1.15fr 1fr;gap:12px;margin-top:14px" id="weekGrid">
+      <div class="panel" style="border:2px solid var(--gold)">
+        <div class="k">THIS WEEK</div>
+        <div id="weekThisDates" style="color:var(--muted);font-size:14px;margin-top:2px">Fri – Wed</div>
+        <div style="display:flex;gap:28px;align-items:flex-end;flex-wrap:wrap;margin-top:10px">
+          <div><div style="font-size:58px;font-weight:800;line-height:1" id="weekThisCount">—</div><div style="color:var(--muted)">games</div></div>
+          <div><div style="font-size:58px;font-weight:800;line-height:1" id="weekThisAcc">—</div><div style="color:var(--muted)">win rate</div></div>
         </div>
-        <div class="boardwrap"><div class="board" id="board"></div></div>
-        <div class="player" style="margin-top:10px">
-          <div class="avatar" id="meAv">?</div>
-          <div class="who"><b id="meName">You</b><span id="meMeta">—</span></div>
-          <div class="clock" id="meClock">--:--</div>
-        </div>
-        <div class="dock">
-          <button id="drawBtn">½ DRAW</button>
-          <button id="undoBtn">↩ UNDO</button>
-          <button id="flipBtn">⇅ FLIP</button>
-          <button id="resignBtn" class="danger">⚑ RESIGN</button>
-        </div>
-        <div class="tabs">
-          <button id="tabGame" class="on">GAME</button>
-          <button id="tabChat">CHAT<span class="badge hide" id="chatBadge">1</span></button>
-          <button id="tabDetails">DETAILS</button>
-        </div>
-        <div class="panel" id="panelGame"><div class="moves" id="moves">No moves yet.</div></div>
-        <div class="panel hide" id="panelChat">
-          <div class="chatlog" id="chatLog"><div class="empty">No chat yet.</div></div>
-          <div class="chatrow"><input id="chatInput" type="text" placeholder="Message your opponent…" maxlength="140"><button class="btn" id="chatSend">SEND</button></div>
-        </div>
-        <div class="panel hide" id="panelDetails"><div class="kv" id="details">—</div></div>
+        <div class="bar" style="margin-top:16px"><i id="weekThisBar" style="width:0%"></i></div>
       </div>
-      <div class="side hide" id="deskSide">
-        <div class="secttl" style="margin-top:0">Moves</div>
-        <div class="panel"><div class="moves" id="movesDesk">No moves yet.</div></div>
-        <div class="secttl">Challenge deck</div>
-        <div class="deck" id="deckDesk"><div class="empty">No challenges right now.</div></div>
+      <div class="panel">
+        <div class="k">LAST WEEK</div>
+        <div id="weekLastDates" style="color:var(--muted);font-size:14px;margin-top:2px">Fri – Wed</div>
+        <div style="display:flex;gap:28px;align-items:flex-end;flex-wrap:wrap;margin-top:10px">
+          <div><div style="font-size:58px;font-weight:800;line-height:1" id="weekLastCount">—</div><div style="color:var(--muted)">games</div></div>
+          <div><div style="font-size:58px;font-weight:800;line-height:1" id="weekLastAcc">—</div><div style="color:var(--muted)">win rate</div></div>
+        </div>
+        <div class="bar" style="margin-top:16px"><i id="weekLastBar" style="width:0%"></i></div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div><div class="k">THURSDAY — BONUS ONLY</div><div id="weekThuDates" style="color:var(--muted);font-size:14px;margin-top:2px">Thursday</div></div>
+      <div style="margin-left:auto;text-align:right"><div style="font-size:42px;font-weight:800;line-height:1" id="weekThuCount">—</div><div style="color:var(--muted)">games · <span id="weekThuAcc">—</span> win rate</div></div>
+    </div>
+    <p style="color:var(--muted);font-size:13px;margin:10px 0 0">Week = Friday to Wednesday. Thursday is bonus only, not counted in the week.</p>
+  </section>
+
+
+
+  <!-- GAMES ARENA -->
+  <section class="arena" id="gamesSection">
+    <div class="sec-head">
+      <div><h3>Games arena</h3><p>Your real Lichess games. Ratings for every speed you've played, your win / loss record, peaks, best wins and your most recent battle days. All public, no token needed, refreshed with the same live check.</p></div>
+      <a class="btn ghost small" href="https://lichess.org/?any#hook" target="_blank" rel="noopener" style="text-decoration:none">Play a game on Lichess →</a>
+    </div>
+    <div class="arena-grid">
+      <div class="panel">
+        <h3>Ratings by speed</h3>
+        <p class="desc">Current rating, games played and recent movement per time control. The bar compares speeds against your highest rating.</p>
+        <div id="speedRows"><p class="desc" style="margin-top:12px">Loading your game ratings…</p></div>
+      </div>
+      <div class="panel">
+        <h3>Game record — all modes</h3>
+        <p class="desc">Every rated and casual game on the account, from Lichess's own counters.</p>
+        <div class="wld" id="wldBar" aria-hidden="true"></div>
+        <div class="wld-legend" id="wldLegend"></div>
+        <div id="recordKv" style="margin-top:8px"></div>
+      </div>
+    </div>
+    <div class="perfdetails" id="perfDetails"></div>
+    <div class="panel" style="margin-top:12px">
+      <h3>Recent battle days</h3>
+      <p class="desc">Your latest active days from Lichess's activity feed — games by speed with the rating you started and ended the day on.</p>
+      <div id="activityList"><p class="desc" style="margin-top:10px">Loading your recent days…</p></div>
+    </div>
+  </section>
+
+
+  <!-- CHART + ACHIEVEMENTS -->
+  <div class="grid2" id="grid2">
+    <div class="panel">
+      <h3>Your rating journey</h3>
+      <p class="desc">Every recorded rapid-rating point from Lichess, oldest to today. Peaks, dips and the comeback — all real.</p>
+      <div class="chartbox" id="chartBox"><p class="desc">Loading history…</p></div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--muted)">
+        <span>Peak <b class="mono" id="statPeak" style="color:var(--ink)">—</b></span>
+        <span>Start <b class="mono" id="statStart" style="color:var(--ink)">—</b></span>
+        <span>Change <b class="mono" id="statDelta" style="color:var(--ink)">—</b></span>
+        <span>Account age <b class="mono" id="statAge" style="color:var(--ink)">—</b></span>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Trophy shelf</h3>
+      <p class="desc">Badges unlock automatically from your real totals. Grey ones are your next targets.</p>
+      <div class="badges" id="badges"></div>
+    </div>
+  </div>
+
+  <!-- PUZZLE REVIEW — SPACED REPETITION -->
+  <section class="arena show" id="srsSection">
+    <div class="sec-head">
+      <div><h3>Puzzle review</h3><p>Every puzzle you got wrong, scheduled like Anki — solve it, mark it, and it comes back right before you would forget it. Needs the token below (puzzle:read only).</p></div>
+    </div>
+    <div class="panel" id="srsLocked">
+      <h3>Review due</h3>
+      <p class="desc">Connect the token below to unlock puzzle review — your wrong puzzles, scheduled with spaced repetition.</p>
+    </div>
+    <div id="srsLive" class="hidden">
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+          <h3>Due today: <span id="srsDueCount">0</span></h3>
+          <span style="font-size:13px;color:var(--muted)" id="srsSummary"></span>
+        </div>
+        <p class="desc" id="srsAutoNote" style="display:none"></p>
+        <ul class="attempts" id="srsDueList"></ul>
+        <p class="desc" id="srsDueEmpty">Nothing due right now — come back tomorrow.</p>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <h3>Wrong puzzles</h3>
+        <p class="desc" id="srsWrongDesc">Your wrong puzzles from the last 14 days, newest first.</p>
+        <ul class="attempts" id="srsWrongList"></ul>
+        <div style="margin-top:12px"><button class="btn ghost small" id="srsLoadOlder" type="button">Load older wrong puzzles</button></div>
       </div>
     </div>
   </section>
+
+  <!-- TOKEN -->
+  <section class="tokenbox" id="tokenBox">
+    <h3>🔓 Unlock puzzle review — free, 1 minute, step by step</h3>
+    <p class="locked-note">The game tracking above needs no login at all — it is all public. But <b>your wrong puzzles and their review schedule</b> are private on Lichess — they need a read-only token from your own account:</p>
+    <p class="locked-note" style="margin-top:8px">When Lichess shows the scope list, tick <b>only</b> <code>puzzle:read</code>: no other box adds anything here, the rest would only give the token powers it doesn't need (playing moves, messages).</p>
+    <ol>
+      <li>Open <a href="https://lichess.org/account/oauth/token" target="_blank" rel="noopener">lichess.org/account/oauth/token</a> and sign in if asked.</li>
+      <li>Write any description, e.g. <code>Obsidian Play review</code>.</li>
+      <li>Tick <b>only</b> the scope <code>Read puzzle activity</code> (<code>puzzle:read</code>). Nothing else.</li>
+      <li>Tap <b>Generate</b>, copy the token (starts with <code>lip_</code>) and paste it here. It can only <i>read</i> puzzle activity — it cannot play, chat or change your account, and you can delete it anytime on that same page.</li>
+    </ol>
+    <form class="tokenrow" id="tokenForm">
+      <input type="password" id="tokenInput" placeholder="Paste token — lip_…" autocomplete="off" aria-label="Lichess API token">
+      <button class="btn" type="submit" id="tokenBtn">Unlock puzzle review</button>
+    </form>
+    <p class="hint"><b>Enter it once — this browser remembers it.</b> After a successful unlock, the token is saved in this browser on this phone (local storage) and reconnected automatically every time you open this page's website link again — no Muse sign-in, no re-pasting. It is only ever sent to lichess.org, never to any other server, and Disconnect below forgets it instantly. Pasting is cleaned up automatically (stray spaces or line breaks are removed), and Lichess itself confirms the token before anything loads.</p>
+    <p class="hint" style="margin-top:8px"><b>Your review progress stays on this phone even if you disconnect.</b> Disconnecting forgets the token only — which puzzles are due, and when, stays saved in this browser, so reconnecting later picks up exactly where you left off.</p>
+    <div class="err" id="tokenError"></div>
+    <div class="tokstat hidden" id="tokenStatus" role="status"></div>
+    <div style="margin-top:10px"><button class="btn ghost small hidden" id="tokenDisconnect" type="button">Disconnect token</button> <button class="btn ghost small hidden" id="deepRetry" type="button">Retry puzzle review</button></div>
+  </section>
+
+
+  <p class="foot">Data comes live from the official Lichess API — <a href="https://lichess.org/api" target="_blank" rel="noopener">lichess.org/api</a> · Public stats: <span class="mono">/api/user</span> &amp; rating history · Games (public): <span class="mono">/api/user/{user}/perf</span> &amp; <span class="mono">/api/user/{user}/activity</span> · Private puzzle review (with your token): <span class="mono">/api/puzzle/activity</span> · Auto-refresh every 20s (Lichess has no push feed, so ~20s is true real-time here) · Bismillah — one game at a time.</p>
 </div>
 
-<!-- ============ END OVERLAY ============ -->
-<div id="endOverlay">
-  <div class="endsheet">
-    <p class="res" id="endResult">—</p>
-    <p class="sub" id="endSub">—</p>
-    <p class="final" id="endFinal">—</p>
-    <div class="btnrow">
-      <button class="btn ghost" id="replayBtn">↻ REPLAY</button>
-      <button class="btn ghost" id="analyzeBtn">◈ ANALYZE</button>
-    </div>
-    <button class="btn" id="playAgainBtn">▶&nbsp; PLAY AGAIN</button>
-    <button class="btn ghost" id="endHomeBtn" style="margin-top:10px">Back to home</button>
-  </div>
-</div>
+<div class="toast" id="toast"></div>
 
-<!-- ============ PROMOTION SHEET ============ -->
-<div class="sheet" id="promoSheet">
-  <div class="sheetbox">
-    <h3>Promote to</h3>
-    <p>Choose a piece. Tap one.</p>
-    <div class="promo" id="promoBtns">
-      <button data-p="q">♕<span>Queen</span></button>
-      <button data-p="r">♖<span>Rook</span></button>
-      <button data-p="b">♗<span>Bishop</span></button>
-      <button data-p="n">♘<span>Knight</span></button>
-    </div>
-  </div>
-</div>
-
-<!-- ============ RESIGN CONFIRM ============ -->
-<div class="sheet" id="confirmSheet">
-  <div class="sheetbox">
-    <h3 id="confirmTitle">Resign the game?</h3>
-    <p id="confirmText">This ends the game now and counts as a loss.</p>
-    <button class="btn danger" id="confirmYes">Yes, resign</button>
-    <button class="btn ghost" id="confirmNo" style="margin-top:10px">Cancel</button>
-  </div>
-</div>
-
-<div id="toasts"></div>
-
-<script>window.module={exports:{}};window.exports=window.module.exports;</script>
-<script src="vendor/chess.js"></script>
 <script>
-var Chess=window.module.exports.Chess;
-</script>
-<script>
-"use strict";
-/* =====================================================================
-   OBSIDIAN PLAY — Phase 1 (P0)
-   Mobile-first Lichess Board API client. Fair play: NO engine, NO eval,
-   NO hints during play. Token is sent ONLY to lichess.org, never logged.
-   ===================================================================== */
-var API = "https://lichess.org";
-var $ = function (s) { return document.querySelector(s); };
-var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var state = { user:null, profile:null, total:0, prevTotal:null, sessionStartTotal:null, sessionSolved:0, token:null, tokenUser:null, remembered:false, deepBusy:false, deepLoaded:false, profileBusy:false, profilePromise:null, actLoaded:false, perfLoaded:false, lastDeep:0, deepRetryTimer:null, deepRetries:0, activity:[], gameFeed:[], todayExact:null, winStreak:0, dayStreak:0, srs:{}, srsBusy:false, srsLoaded:false, srsOldest:null, srsAll:[], timer:null, countdown:20, lastFetch:null, prevGames:null };
 
-var S = {
-  token: null, me: null,           // me: {id, username}
-  gameId: null, game: null,        // game: {white:{id,name,rating}, black:{...}, rated, speed, perf, clock, variant, initialFen, status, winner}
-  chess: new Chess(),
-  myColor: null, orient: "white",
-  serverMoves: [],                 // UCI list from last gameState
-  pendingUci: null, premove: null, // pendingUci: sent, awaiting server echo
-  selected: null, legal: [],
-  clocks: { w: 0, b: 0, winc: 0, binc: 0, turn: "w", at: 0 },
-  conn: "offline",                 // offline | connected | reconnecting | syncing | seeking
-  seeking: false, seekCtrl: null,
-  challenges: new Map(),           // id -> challenge object
-  ongoing: [],
-  lastTC: { time: 5, inc: 3 }, rated: true,
-  sound: true, chatUnread: 0,
-  endShown: false, gameEnded: false,
-  drag: null, promoPending: null,
-  evAbort: null, gameAbort: null,
-  evBackoff: 2000, gameBackoff: 2000,
-  reconnectTimer: null
-};
+  /* Remember-me storage: the token (and username/goal) live in THIS browser's
+     local storage on THIS device only, so the public website link can be opened
+     by anyone (e.g. family) with no Muse account — paste once per phone/browser,
+     then it reconnects by itself. Nothing is baked into the page or sent anywhere
+     except lichess.org. Wrapped in try/catch: in-app/private browsers may block it. */
+  var LS = { token:"opt_token_v1", user:"opt_user_v1", goal:"opt_goal_v1", today:"opt_today_v1", srs:"opt_srs_v1" };
+  function lsGet(k){ try{ return window.localStorage.getItem(k); }catch(e){ return null; } }
+  function lsSet(k,v){ try{ window.localStorage.setItem(k,v); return window.localStorage.getItem(k)===v; }catch(e){ return false; } }
+  function lsDel(k){ try{ window.localStorage.removeItem(k); }catch(e){} }
 
-/* ---------------- utils ---------------- */
-function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
-function toast(msg, kind) {
-  var t = document.createElement("div");
-  t.className = "toast" + (kind ? " " + kind : "");
-  t.textContent = msg;
-  $("#toasts").appendChild(t);
-  setTimeout(function () { t.remove(); }, 6000);
-}
-function load(key, def) { try { var v = localStorage.getItem(key); return v == null ? def : JSON.parse(v); } catch (e) { return def; } }
-function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
-function errText(e) {
-  if (e && e.body) return e.body;
-  if (e && e.message) return e.message;
-  return String(e);
-}
-function lichessErrorText(body) {
-  if (!body) return "";
-  try { var j = JSON.parse(body); if (j && j.error) return String(j.error); } catch (e) {}
-  return String(body).slice(0, 200);
-}
+  var LEVELS = [
+    [0,"First Move"],[1,"Pawn Push"],[5,"Knight's Leap"],[10,"Opening Explorer"],[25,"Rapid Regular"],
+    [50,"Blitz Battler"],[100,"Century Club"],[250,"Seasoned Player"],[500,"Board Warrior"],[1000,"Tournament Titan"]
+  ];
+  var BADGES = [
+    [1,"♟","First Game","Play 1 game"],[10,"♞","Warming Up","10 games"],[25,"♝","Rapid Regular","25 games"],
+    [50,"♜","Half Century","50 games"],[100,"⚔","Century Club","100 games"],[250,"👑","Seasoned Player","250 games"],
+    [500,"💎","Board Royalty","500 games"]
+  ];
 
-/* ---------------- audio / haptics (restrained, disableable) ---------------- */
-var AC = null;
-function beep(freq, dur, gain) {
-  if (!S.sound) return;
-  try {
-    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
-    var o = AC.createOscillator(), g = AC.createGain();
-    o.frequency.value = freq; o.type = "sine";
-    g.gain.value = gain || 0.05;
-    o.connect(g); g.connect(AC.destination);
-    o.start(); g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + dur);
-    o.stop(AC.currentTime + dur);
-  } catch (e) {}
-}
-function sndMove() { beep(520, 0.06, 0.04); }
-function sndCapture() { beep(300, 0.09, 0.06); if (navigator.vibrate) navigator.vibrate(12); }
-function sndCheck() { beep(760, 0.12, 0.06); if (navigator.vibrate) navigator.vibrate([15, 30, 15]); }
-function sndEnd() { beep(420, 0.25, 0.05); }
-function sndFound() { beep(660, 0.1, 0.05); setTimeout(function () { beep(880, 0.14, 0.05); }, 110); }
+  /* Verified live from https://lichess.org/api/user/skypiercer_3
+     on 9 Nov 2026, 17:10 MYT. Shown instantly on open, then replaced by a fresh live fetch within seconds.
+     Note: /api/user/{user}/rating-history returns [] for this account, so the rapid chart shows its
+     empty message until Lichess publishes points. Game downloads (/api/games/user) return 404 for this
+     account, so games-per-day comes from the public activity feed instead. */
+  var SNAPSHOT = {"id":"skypiercer_3","username":"skypiercer_3","perfs":{"bullet":{"games":1,"rating":1247,"rd":287,"prog":0,"prov":true},"blitz":{"games":4,"rating":1761,"rd":229,"prog":0,"prov":true},"rapid":{"games":25,"rating":1049,"rd":103,"prog":-24},"classical":{"games":0,"rating":1500,"rd":500,"prog":0,"prov":true},"correspondence":{"games":0,"rating":1500,"rd":500,"prog":0,"prov":true},"puzzle":{"games":187,"rating":1449,"rd":96,"prog":0},"storm":{"runs":1,"score":7},"racer":{"runs":4,"score":11}},"createdAt":1744344912521,"playTime":{"total":17905,"tv":0},"count":{"all":35,"rated":30,"draw":0,"loss":19,"win":16,"bookmark":0,"playing":0,"import":0,"me":0}};
+  var SNAPSHOT_LABEL = "9 Nov 2026 · 17:10 MYT";
 
-/* ---------------- connection pill ---------------- */
-function setConn(mode, label) {
-  S.conn = mode;
-  var dot = $("#connDot"), txt = $("#connText");
-  dot.className = "dot" + (mode === "connected" ? " on" : mode === "reconnecting" ? " warn" : mode === "syncing" || mode === "seeking" ? " sync" : mode === "offline" ? " bad" : "");
-  txt.textContent = label || mode.toUpperCase();
-}
+  function fmt(n){ return (n==null||isNaN(n)) ? "—" : Number(n).toLocaleString("en-US"); }
+  function toast(msg, ms){ var t=$("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(function(){ t.classList.remove("show"); }, ms||3200); }
+  function timeAgo(ts){ var s=Math.max(0,Math.round((Date.now()-ts)/1000)); if(s<8) return "just now"; if(s<60) return s+"s ago"; var m=Math.round(s/60); return m+" min ago"; }
 
-/* ---------------- serialized API queue: ONE request at a time ---------------- */
-var Q = Promise.resolve();
-function enqueue(fn) {
-  var r = Q.then(fn, fn);
-  Q = r.catch(function () {});
-  return r;
-}
-function api(path, opts) {
-  opts = opts || {};
-  var method = opts.method || "GET";
-  var timeoutMs = opts.timeout == null ? 30000 : opts.timeout;
-  return enqueue(function () {
-    var ctrl = new AbortController();
-    var to = setTimeout(function () { ctrl.abort(); }, timeoutMs);
-    var headers = { "Authorization": "Bearer " + S.token, "Accept": opts.accept || "application/json" };
-    if (opts.body) headers["Content-Type"] = "application/x-www-form-urlencoded";
-    return fetch(API + path, { method: method, headers: headers, body: opts.body || undefined, credentials: "omit", signal: opts.signal || ctrl.signal })
-      .then(function (resp) {
-        clearTimeout(to);
-        if (resp.status === 429) {
-          var e = new Error("Lichess rate limit (429). Wait about a minute before trying again.");
-          e.status = 429; throw e;
-        }
-        if (!resp.ok) {
-          return resp.text().then(function (t) {
-            var e = new Error(lichessErrorText(t) || ("HTTP " + resp.status));
-            e.status = resp.status; e.body = lichessErrorText(t);
-            throw e;
-          });
-        }
-        return resp;
+
+  function levelFor(total){
+    var cur=LEVELS[0], next=null;
+    for(var i=0;i<LEVELS.length;i++){ if(total>=LEVELS[i][0]){ cur=LEVELS[i]; next=LEVELS[i+1]||null; } }
+    return {cur:cur, next:next};
+  }
+  function renderBadges(total){
+    var html = BADGES.map(function(b){
+      var got = total>=b[0];
+      return '<div class="badge'+(got?" got":"")+'"><div class="ic">'+b[1]+'</div><b>'+b[2]+(got?" ✓":"")+'</b><span>'+b[3]+'</span></div>';
+    }).join("");
+    var ws = state.winStreak||0, ds = state.dayStreak||0;
+    html += '<div class="badge'+(ws>=3?" got":"")+'"><div class="ic">🔥</div><b>Hot Streak'+(ws>=3?" ✓":"")+'</b><span>Win 3 games in a row'+(ws>0?" · current streak "+fmt(ws):"")+'</span></div>';
+    html += '<div class="badge'+(ds>=3?" got":"")+'"><div class="ic">📅</div><b>Daily Grinder'+(ds>=3?" ✓":"")+'</b><span>Play on 3 days in a row'+(ds>0?" · now at "+fmt(ds):"")+'</span></div>';
+    $("badges").innerHTML = html;
+  }
+  function animateCount(from,to){
+    var el=$("bigCount"); var start=performance.now(), dur=700;
+    function step(t){ var p=Math.min(1,(t-start)/dur); var v=Math.round(from+(to-from)*(1-Math.pow(1-p,3))); el.textContent=fmt(v); if(p<1) requestAnimationFrame(step); }
+    requestAnimationFrame(step);
+  }
+  function applyProfile(data, isFirst){
+    if(data!==SNAPSHOT) state.snapshotShown=false;
+    var total = (data.count && data.count.all!=null) ? data.count.all : 0;
+    var gained = (state.prevTotal!=null) ? total-state.prevTotal : 0;
+    if(isFirst){ state.sessionStartTotal=total; }
+    if(gained>0){
+      state.sessionSolved += gained;
+      $("bigCount").classList.remove("bump"); void $("bigCount").offsetWidth; $("bigCount").classList.add("bump");
+      toast("♟ +"+gained+" game"+(gained>1?"s":"")+" finished — counter updated live! Total: "+fmt(total));
+    }
+    animateCount(state.prevTotal!=null?state.prevTotal:Math.max(0,total-0), total);
+    state.prevTotal=total; state.total=total; state.profile=data; state.lastFetch=Date.now();
+    /* A fresh answer from Lichess restarts the auto-check clock, so the
+       "checked … ago" line and the countdown always describe the fetch
+       that actually landed — not when a (possibly queued) request began. */
+    state.countdown=20;
+
+    $("avatarLetter").textContent=(data.username||"?").charAt(0).toUpperCase();
+    $("whoName").textContent=(data.title?data.title+" ":"")+data.username;
+    var created = data.createdAt ? new Date(data.createdAt) : null;
+    $("whoMeta").innerHTML="On Lichess since "+(created?created.toLocaleDateString("en-GB",{month:"short",year:"numeric"}):"—")+" · "+(data.count&&data.count.all?fmt(data.count.all)+" games all modes":"")+" · <a href=\"https://lichess.org/@/"+data.username+"\" target=\"_blank\" rel=\"noopener\">View profile ↗</a>";
+    var playH = data.playTime&&data.playTime.total ? Math.round(data.playTime.total/3600) : null;
+    $("subCount").innerHTML="<strong>"+fmt(total)+"</strong> games and counting"+(playH?" · <strong>"+fmt(playH)+"h</strong> total time on Lichess":"")+" · Last checked <span id='chkAgo'>just now</span> · Next auto-check in <strong id='cd'>20</strong>s";
+
+    // today: exact (activity feed) else last counted today (saved on this phone)
+    // else session-based — never show 0 just because the refresh failed
+    var savedToday=null;
+    try{ var stJ=JSON.parse(lsGet(LS.today)||"null"); if(stJ && stJ.d===new Date().toISOString().slice(0,10) && typeof stJ.n==="number") savedToday=stJ.n; }catch(e){}
+    var todayVal = (state.todayExact!=null) ? state.todayExact : (savedToday!=null ? savedToday : state.sessionSolved);
+    var todayStale = (state.todayExact==null && savedToday!=null);
+    $("tToday").textContent = fmt(todayVal);
+    $("flameIc").textContent = state.dayStreak>0 ? "🔥×"+state.dayStreak : (todayVal>0 ? "🔥" : "");
+    if(state.todayExact==null){
+      if(todayStale){ $("tTodaySub").textContent="Last counted today: "+fmt(savedToday)+" games — Lichess did not answer just now, so this is the last good count. It retries by itself."; }
+      else { $("tTodaySub").textContent="Games finished since you opened this page: "+fmt(state.sessionSolved)+"."; }
+    }
+    var goal = Math.max(1, parseInt($("goalInput").value,10)||5);
+    var pct = Math.min(100, Math.round(todayVal/goal*100));
+    $("ringFg").style.strokeDashoffset = String(402 - 402*pct/100);
+    $("ringNum").textContent = todayVal+" / "+goal;
+    $("ringText").textContent = todayVal>=goal ? "Goal smashed today. Anything more is pure bonus — champion behaviour." : (goal-todayVal)+" more to hit today's goal of "+goal+". One sitting can do it.";
+
+    // level
+    var lv=levelFor(total);
+    $("levelName").innerHTML="<b>Level: "+lv.cur[1]+"</b> · "+fmt(total)+" XP (1 game = 1 XP)";
+    if(lv.next){ var span=lv.next[0]-lv.cur[0], done=total-lv.cur[0]; $("levelNext").textContent=fmt(lv.next[0]-total)+" games to “"+lv.next[1]+"”"; $("levelFill").style.width=(span?Math.round(done/span*100):100)+"%"; }
+    else { $("levelNext").textContent="Max level reached. Unreal."; $("levelFill").style.width="100%"; }
+
+    renderBadges(total);
+    renderGames(data);
+    updateLivePill();
+  }
+  function updateLivePill(){
+    $("liveDot").classList.add("on");
+    $("liveText").textContent = state.user ? ("Live · @"+state.user+" · checked "+(state.lastFetch?timeAgo(state.lastFetch):"—")) : "Not connected yet";
+  }
+  /* Returns a promise for true (Lichess answered, data applied) or false.
+     A call that arrives while a fetch is already in flight joins that
+     same promise instead of being silently dropped — that drop is why
+     Refresh used to toast "Refreshed ✓" while the "checked … ago" timer
+     kept climbing: no new fetch ever ran and lastFetch never moved. */
+  function fetchProfile(silent){
+    if(!state.user) return Promise.resolve(false);
+    if(state.profileBusy && state.profilePromise) return state.profilePromise;
+    state.profileBusy=true;
+    state.profilePromise = lichessFetch("https://lichess.org/api/user/"+encodeURIComponent(state.user),{headers:{"Accept":"application/json"}},2)
+      .then(function(r){ if(r.status===404) throw new Error("notfound"); if(!r.ok) throw new Error("http"+r.status); return r.json(); })
+      .then(function(d){ applyProfile(d, state.prevTotal==null); /* Puzzle review is heavy (up to a 1,000-attempt stream): reloading it on every 20s poll wasted Lichess rate limit and made fresh unlocks collide with a poll reload — now at most once per 5 minutes once it has loaded, never while an auto-retry is pending, and promptly while it has never loaded. */
+        if(state.token && !state.deepBusy && !state.deepRetryTimer && (!state.deepLoaded || Date.now()-(state.lastDeep||0)>300000)) loadDeep(false);
+        return true; })
+      .catch(function(e){
+        if(!silent){ showUserError(e.message==="notfound" ? "That username wasn't found on Lichess. Check the spelling — it must match your lichess.org name exactly." : "Couldn't reach Lichess just now. Check your connection and tap Refresh."); }
+        return false;
       })
-      .catch(function (e) { clearTimeout(to); throw e; });
-  });
-}
-function apiJson(path, opts) { return api(path, opts).then(function (r) { return r.json(); }); }
-function apiPost(path, params) {
-  var body = params ? new URLSearchParams(params).toString() : null;
-  return api(path, { method: "POST", body: body });
-}
+      .then(function(ok){ state.profileBusy=false; state.profilePromise=null; return ok; });
+    return state.profilePromise;
+  }
+  function fetchHistory(){
+    lichessFetch("https://lichess.org/api/user/"+encodeURIComponent(state.user)+"/rating-history",{headers:{"Accept":"application/json"}},2)
+      .then(function(r){ if(!r.ok) throw new Error("http"+r.status); return r.json(); })
+      .then(function(arr){
+        var pz=null; for(var i=0;i<arr.length;i++){ if(arr[i].name==="Rapid") pz=arr[i]; }
+        if(!pz||!pz.points||pz.points.length<2){ $("chartBox").innerHTML='<p class="desc">Not enough rapid history yet — Lichess publishes rating points over time, and this chart draws itself automatically once they land. Your live rapid rating in the Games arena above is always current.</p>'; return; }
+        drawChart(pz.points);
+        var vals=pz.points.map(function(p){return p[3];});
+        var peak=Math.max.apply(null,vals), start=vals[0], last=vals[vals.length-1];
+        $("statPeak").textContent=fmt(peak); $("statStart").textContent=fmt(start);
+        var d=last-start; $("statDelta").textContent=(d>=0?"+":"")+fmt(d); $("statDelta").style.color=d>=0?"var(--green)":"var(--red)";
+      }).catch(function(){ $("chartBox").innerHTML='<p class="desc">Rating history could not load just now — retrying automatically in a few seconds.</p>'; retryLater("history", fetchHistory, 20000); });
+  }
+  function drawChart(points){
+    var W=640,H=210,padL=44,padR=10,padT=12,padB=24;
+    var vals=points.map(function(p){return p[3];});
+    var min=Math.min.apply(null,vals), max=Math.max.apply(null,vals);
+    var span=(max-min)||1; min-=span*0.12; max+=span*0.12; span=max-min;
+    function X(i){ return padL + (W-padL-padR)*(points.length===1?0.5:i/(points.length-1)); }
+    function Y(v){ return padT + (H-padT-padB)*(1-(v-min)/span); }
+    var path=points.map(function(p,i){ return (i===0?"M":"L")+X(i).toFixed(1)+","+Y(p[3]).toFixed(1); }).join(" ");
+    var area=path+" L"+X(points.length-1).toFixed(1)+","+(H-padB)+" L"+padL+","+(H-padB)+" Z";
+    var grid=""; for(var g=0;g<4;g++){ var v=min+span*g/3, y=Y(v); grid+='<line x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'" stroke="var(--line)" stroke-width="1"/><text class="axis" x="'+(padL-6)+'" y="'+(y+3)+'" text-anchor="end">'+Math.round(v)+'</text>'; }
+    var first=points[0], lastp=points[points.length-1];
+    function ds(p){ return new Date(p[0],p[1],p[2]).toLocaleDateString("en-GB",{month:"short",year:"2-digit"}); }
+    $("chartBox").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Rapid rating history chart">'+grid+'<path d="'+area+'" fill="var(--gold)" opacity="0.14"/><path d="'+path+'" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-linejoin="round"/><circle cx="'+X(points.length-1)+'" cy="'+Y(lastp[3])+'" r="4.5" fill="var(--gold)"/><text class="axis" x="'+padL+'" y="'+(H-6)+'">'+ds(first)+'</text><text class="axis" x="'+(W-padR)+'" y="'+(H-6)+'" text-anchor="end">'+ds(lastp)+' · '+fmt(lastp[3])+'</text></svg>';
+  }
 
-/* ---------------- NDJSON stream reader ---------------- */
-function readNDJSON(resp, onObj, signal) {
-  var reader = resp.body.getReader();
-  var dec = new TextDecoder();
-  var buf = "";
-  function pump() {
-    return reader.read().then(function (res) {
-      if (res.done) return "closed";
-      buf += dec.decode(res.value, { stream: true });
-      var i;
-      while ((i = buf.indexOf("\n")) >= 0) {
-        var line = buf.slice(0, i).trim();
-        buf = buf.slice(i + 1);
-        if (line) { try { onObj(JSON.parse(line)); } catch (e) {} }
-      }
-      return pump();
+  /* ---------- GAMES + STORM / STREAK / RACER (all public, no token) ---------- */
+  var SPEEDS = [
+    ["ultraBullet","UltraBullet","¼ min"],["bullet","Bullet","1 min"],["blitz","Blitz","3–5 min"],["rapid","Rapid","10–25 min"],
+    ["classical","Classical","30+ min"],["correspondence","Correspondence","days"],["chess960","Chess960",""],["racingKings","Racing Kings",""],
+    ["kingOfTheHill","King of the Hill",""],["threeCheck","Three-check",""],["antichess","Antichess",""],["atomic","Atomic",""],["horde","Horde",""],["crazyhouse","Crazyhouse",""]
+  ];
+  var SPEEDNAME = {}; SPEEDS.forEach(function(s){ SPEEDNAME[s[0]]=s[1]; });
+  function progHtml(p){ if(p==null||p===0) return ""; return p>0 ? ' <span class="up">▲ '+p+'</span>' : ' <span class="down">▼ '+Math.abs(p)+'</span>'; }
+  function renderGames(data){
+    var perfs = data.perfs||{};
+    // bump toast when a finished game lands while page is open
+    var gamesAll = (data.count && data.count.all!=null) ? data.count.all : null;
+    if(gamesAll!=null){
+      if(state.prevGames!=null && gamesAll>state.prevGames){ toast("♟ Game finished — your record just updated live. Total games: "+fmt(gamesAll)); }
+      state.prevGames = gamesAll;
+    }
+    // ratings by speed
+    var shown = SPEEDS.filter(function(s){ var p=perfs[s[0]]; return p && (p.games>0 || s[0]==="bullet" || s[0]==="blitz" || s[0]==="rapid"); });
+    var maxR = 0; shown.forEach(function(s){ if(perfs[s[0]].rating>maxR) maxR=perfs[s[0]].rating; });
+    $("speedRows").innerHTML = shown.map(function(s){
+      var p=perfs[s[0]];
+      var pct = maxR ? Math.max(6, Math.round(p.rating/maxR*100)) : 0;
+      return '<div class="speedrow"><div class="nm"><b>'+s[1]+'</b><span>'+(s[2]||"variant")+'</span></div>'+
+        '<div class="rt">'+(p.rating?fmt(p.rating):"—")+(p.prov?' <span style="font-size:13px;color:var(--faint)">prov.</span>':"")+'</div>'+
+        '<div class="rtrack"><i style="width:'+pct+'%"></i></div>'+
+        '<div class="meta"><b>'+fmt(p.games||0)+'</b> games'+progHtml(p.prog)+'<br>±'+(p.rd!=null?p.rd:"—")+' deviation</div></div>';
+    }).join("") || '<p class="desc" style="margin-top:12px">No games on this account yet.</p>';
+    // record
+    var c = data.count||{}; var w=c.win||0, l=c.loss||0, dr=c.draw||0, all=c.all||(w+l+dr);
+    var pw = all?Math.round(w/all*1000)/10:0, pl = all?Math.round(l/all*1000)/10:0, pd = Math.max(0, Math.round((100-pw-pl)*10)/10);
+    $("wldBar").innerHTML = all ? '<i class="w" style="width:'+pw+'%"></i><i class="d" style="width:'+pd+'%"></i><i class="l" style="width:'+pl+'%"></i>' : "";
+    $("wldLegend").innerHTML = '<span>Wins <b>'+fmt(w)+'</b></span><span>Draws <b>'+fmt(dr)+'</b></span><span>Losses <b>'+fmt(l)+'</b></span><span>Total <b>'+fmt(all)+'</b></span>';
+    var played = SPEEDS.map(function(s){ return [s[1], perfs[s[0]]]; }).filter(function(x){ return x[1] && x[1].games>0; });
+    var bestSpeed="—", mostPlayed="—";
+    if(played.length){
+      var bs=played.slice().sort(function(a,b){return b[1].rating-a[1].rating;})[0];
+      var mp=played.slice().sort(function(a,b){return b[1].games-a[1].games;})[0];
+      bestSpeed = bs[0]+" · "+fmt(bs[1].rating); mostPlayed = mp[0]+" · "+fmt(mp[1].games)+" games";
+    }
+    var hrs = data.playTime&&data.playTime.total ? Math.floor(data.playTime.total/3600) : 0;
+    var mins = data.playTime&&data.playTime.total ? Math.round((data.playTime.total%3600)/60) : 0;
+    $("recordKv").innerHTML =
+      '<div class="kv"><span>Win rate</span><b>'+(all?(Math.round(w/all*1000)/10)+"%":"—")+'</b></div>'+
+      '<div class="kv"><span>Rated games</span><b>'+fmt(c.rated||0)+'</b></div>'+
+      '<div class="kv"><span>Highest-rated speed</span><b>'+bestSpeed+'</b></div>'+
+      '<div class="kv"><span>Most played speed</span><b>'+mostPlayed+'</b></div>'+
+      '<div class="kv"><span>Total time on Lichess</span><b>'+(data.playTime?hrs+"h "+mins+"m":"—")+'</b></div>';
+  }
+  function fetchPerfDetails(){
+    if(!state.user) return;
+    var keys=[["bullet","Bullet"],["blitz","Blitz"],["rapid","Rapid"]];
+    /* Only draw the Loading placeholders before the first successful
+       load. Rebuilding them on every Refresh used to wipe good detail
+       panels and then strand them on "unavailable" if one request in
+       the burst failed (e.g. a 429) — now loaded panels stay put and
+       only get replaced by fresher data. */
+    if(!state.perfLoaded){
+      $("perfDetails").innerHTML = keys.map(function(k){
+        return '<div class="panel"><h3>'+k[1]+' detail</h3><p class="desc" id="perf-'+k[0]+'">Loading peak, best win and streaks…</p></div>';
+      }).join("");
+    }
+    keys.forEach(function(k){
+      lichessFetch("https://lichess.org/api/user/"+encodeURIComponent(state.user)+"/perf/"+k[0],{headers:{"Accept":"application/json"}},2)
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(d){
+          var el=$("perf-"+k[0]); if(!el) return;
+          if(!d || !d.stat){
+            if(!state.perfLoaded){ el.textContent="Detail for "+k[1]+" did not load just now — retrying automatically in a few seconds."; retryLater("perf", fetchPerfDetails, 15000); }
+            return;
+          }
+          state.perfLoaded=true;
+          var st=d.stat, cnt=st.count||{};
+          var peak = st.highest ? fmt(st.highest.int)+(st.highest.at?" · "+new Date(st.highest.at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"") : "—";
+          var bw = (st.bestWins && st.bestWins.results && st.bestWins.results[0]) ? st.bestWins.results[0] : null;
+          var bwHtml = bw ? '<a href="https://lichess.org/'+bw.gameId+'" target="_blank" rel="noopener">'+bw.opId.name+'</a> ('+fmt(bw.opRating)+')' : "—";
+          var rs = st.resultStreak||{};
+          var curW = rs.win&&rs.win.cur?rs.win.cur.v:0, maxW = rs.win&&rs.win.max?rs.win.max.v:0;
+          el.innerHTML =
+            '<div class="kv"><span>Peak rating</span><b>'+peak+'</b></div>'+
+            '<div class="kv"><span>Best win vs</span><b>'+bwHtml+'</b></div>'+
+            '<div class="kv"><span>Record at this speed</span><b>'+fmt(cnt.win||0)+'W · '+fmt(cnt.draw||0)+'D · '+fmt(cnt.loss||0)+'L</b></div>'+
+            '<div class="kv"><span>Avg opponent</span><b>'+(cnt.opAvg?fmt(Math.round(cnt.opAvg)):"—")+'</b></div>'+
+            '<div class="kv"><span>Win streak</span><b>'+fmt(curW)+' now · best '+fmt(maxW)+'</b></div>'+
+            '<div class="kv"><span>World rank</span><b>'+(d.rank?"#"+fmt(d.rank):"unranked yet")+'</b></div>';
+        })
+        .catch(function(){ var el=$("perf-"+k[0]); if(el && !state.perfLoaded){ el.textContent="Detail for "+k[1]+" did not load just now — retrying automatically in a few seconds."; retryLater("perf", fetchPerfDetails, 15000); } });
     });
   }
-  return pump();
-}
-
-/* ---------------- token / connect ---------------- */
-function setConnectedUI(on) {
-  $("#connectCard").classList.toggle("hide", on);
-  $("#homeView").classList.toggle("hide", !on);
-  if (!on) { $("#gameView").style.display = "none"; }
-}
-function validateAndConnect(token, user, silent) {
-  S.token = token;
-  return api("/api/account", { timeout: 15000 }).then(function (r) { return r.json(); }).then(function (acc) {
-    S.me = { id: acc.id, username: acc.username };
-    if (user && user.toLowerCase() !== acc.username.toLowerCase()) {
-      toast("Token belongs to @" + acc.username + ", not @" + user + ". Using @" + acc.username + ".", "err");
-    }
-    save("op_token_v1", token);
-    save("op_user_v1", acc.username);
-    $("#inUser").value = acc.username;
-    $("#connStatus").textContent = "";
-    $("#connStatus").className = "status ok";
-    $("#connStatus").textContent = "Connected as @" + acc.username;
-    setConnectedUI(true);
-    updateMeUI();
-    openEventStream();
-    refreshOngoing();
-    if (!silent) toast("Connected as @" + acc.username, "ok");
-    return acc;
-  }).catch(function (e) {
-    S.token = null;
-    if (e && e.status === 401) {
-      $("#connStatus").className = "status err";
-      $("#connStatus").textContent = "Token rejected (401) — check the token and its scopes (board:play, challenge:read, challenge:write).";
-    } else {
-      $("#connStatus").className = "status err";
-      $("#connStatus").textContent = "Could not reach Lichess: " + errText(e);
-    }
-    throw e;
-  });
-}
-function disconnect() {
-  try { localStorage.removeItem("op_token_v1"); localStorage.removeItem("op_user_v1"); } catch (e) {}
-  if (S.evAbort) S.evAbort.abort();
-  if (S.gameAbort) S.gameAbort.abort();
-  if (S.seekCtrl) S.seekCtrl.abort();
-  S.token = null; S.me = null; S.gameId = null; S.game = null; S.challenges.clear();
-  setConn("offline", "OFFLINE");
-  setConnectedUI(false);
-  $("#inToken").value = "";
-  $("#connStatus").textContent = "";
-  renderDeck();
-}
-function updateMeUI() {
-  if (!S.me) return;
-  $("#meName").textContent = "@" + S.me.username + " (you)";
-  $("#meAv").textContent = S.me.username.charAt(0).toUpperCase();
-}
-
-/* ---------------- event stream ---------------- */
-function openEventStream() {
-  if (!S.token) return;
-  if (S.evAbort) S.evAbort.abort();
-  var ctrl = new AbortController();
-  S.evAbort = ctrl;
-  setConn("connected", "CONNECTED");
-  fetch(API + "/api/stream/event", {
-    headers: { "Authorization": "Bearer " + S.token, "Accept": "application/x-ndjson" },
-    credentials: "omit", signal: ctrl.signal
-  }).then(function (resp) {
-    if (!resp.ok) {
-      if (resp.status === 401) { disconnect(); toast("Token rejected by Lichess (401).", "err"); return null; }
-      throw new Error("HTTP " + resp.status);
-    }
-    S.evBackoff = 2000;
-    return readNDJSON(resp, onEvent);
-  }).then(function (why) {
-    if (ctrl.signal.aborted || !S.token) return;
-    setConn("reconnecting", "RECONNECTING");
-    var wait = S.evBackoff;
-    S.evBackoff = Math.min(S.evBackoff * 2, 30000);
-    setTimeout(openEventStream, wait);
-  }).catch(function (e) {
-    if (ctrl.signal.aborted || !S.token) return;
-    setConn("reconnecting", "RECONNECTING");
-    var wait = S.evBackoff;
-    S.evBackoff = Math.min(S.evBackoff * 2, 30000);
-    setTimeout(openEventStream, wait);
-  });
-}
-function onEvent(ev) {
-  if (!ev || !ev.type) return;
-  if (ev.type === "gameStart") {
-    var id = ev.game && ev.game.id;
-    if (id && id !== S.gameId) { openGame(id); }
-  } else if (ev.type === "gameFinish") {
-    var gid = ev.game && ev.game.id;
-    if (gid && gid === S.gameId) { /* game stream will end it; refresh list */ }
-    refreshOngoing();
-  } else if (ev.type === "challenge") {
-    var ch = ev.challenge;
-    if (ch && ch.id) { S.challenges.set(ch.id, ch); renderDeck(); toast("Challenge from @" + (ch.challenger && ch.challenger.name || "?"), "ok"); }
-  } else if (ev.type === "challengeCanceled" || ev.type === "challengeDeclined") {
-    var cid = ev.challenge && ev.challenge.id;
-    if (cid && S.challenges.has(cid)) { S.challenges.delete(cid); renderDeck(); }
-  }
-}
-
-/* ---------------- ongoing games ---------------- */
-function refreshOngoing() {
-  if (!S.token) return;
-  apiJson("/api/account/playing").then(function (d) {
-    S.ongoing = (d && d.nowPlaying) || [];
-    renderOngoing();
-  }).catch(function () { /* non-fatal; event stream still covers new games */ });
-}
-function renderOngoing() {
-  var box = $("#ogames");
-  var list = S.ongoing.filter(function (g) { return g.gameId !== S.gameId; });
-  if (!list.length) { box.innerHTML = '<div class="empty">No games in progress.</div>'; return; }
-  box.innerHTML = "";
-  list.forEach(function (g) {
-    var opp = g.opponent || {};
-    var row = document.createElement("div");
-    row.className = "ogame";
-    row.innerHTML = '<div class="vs"><b>' + esc(opp.username || "?") + '</b><span>' + esc(g.speed || "") + " · " + esc(g.color === "white" ? "you play White" : g.color === "black" ? "you play Black" : "") + " · " + esc(g.variant && g.variant.name || "Standard") + "</span></div>";
-    var b = document.createElement("button");
-    b.className = "btn"; b.textContent = "RESUME";
-    b.onclick = function () { openGame(g.gameId); };
-    row.appendChild(b);
-    box.appendChild(row);
-  });
-}
-
-/* ---------------- game stream ---------------- */
-function openGame(gameId) {
-  if (S.gameAbort) S.gameAbort.abort();
-  S.gameId = gameId; S.gameEnded = false; S.endShown = false;
-  S.pendingUci = null; S.premove = null; S.selected = null; S.chatUnread = 0;
-  $("#endOverlay").classList.remove("show");
-  $("#homeView").classList.add("hide");
-  $("#gameView").style.display = "flex";
-  $("#chatLog").innerHTML = '<div class="empty">No chat yet.</div>';
-  $("#chatBadge").classList.add("hide");
-  setConn("connected", "CONNECTED");
-  sndFound();
-  var ctrl = new AbortController();
-  S.gameAbort = ctrl;
-  fetch(API + "/api/board/game/stream/" + gameId, {
-    headers: { "Authorization": "Bearer " + S.token, "Accept": "application/x-ndjson" },
-    credentials: "omit", signal: ctrl.signal
-  }).then(function (resp) {
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    S.gameBackoff = 2000;
-    return readNDJSON(resp, onGameEvent);
-  }).then(function () {
-    if (ctrl.signal.aborted || !S.token) return;
-    if (S.gameEnded) return; // server closed the stream because the game ended
-    setConn("reconnecting", "RECONNECTING");
-    var wait = S.gameBackoff;
-    S.gameBackoff = Math.min(S.gameBackoff * 2, 30000);
-    S.reconnectTimer = setTimeout(function () { if (S.gameId === gameId && !S.gameEnded) openGame(gameId); }, wait);
-  }).catch(function (e) {
-    if (ctrl.signal.aborted || !S.token) return;
-    if (S.gameEnded) return;
-    setConn("reconnecting", "RECONNECTING");
-    var wait = S.gameBackoff;
-    S.gameBackoff = Math.min(S.gameBackoff * 2, 30000);
-    S.reconnectTimer = setTimeout(function () { if (S.gameId === gameId && !S.gameEnded) openGame(gameId); }, wait);
-  });
-}
-function onGameEvent(ev) {
-  if (!ev || !ev.type) return;
-  if (ev.type === "gameFull") {
-    S.game = ev;
-    S.myColor = (S.me && ev.white && ev.white.id === S.me.id) ? "white" : "black";
-    S.orient = S.myColor;
-    S.chess = new Chess(ev.initialFen && ev.initialFen !== "startpos" ? ev.initialFen : undefined);
-    S.serverMoves = [];
-    applyState(ev.state, null);
-    renderAll();
-    updateDetails();
-  } else if (ev.type === "gameState") {
-    applyState(ev, null);
-    renderAll();
-  } else if (ev.type === "chatLine") {
-    addChat(ev.username, ev.text, ev.room);
-  } else if (ev.type === "opponentGone") {
-    if (ev.gone) toast("Your opponent left the game.", "err");
-  }
-}
-function applyState(gs, _unused) {
-  if (!gs) return;
-  var moves = gs.moves ? gs.moves.split(" ").filter(Boolean) : [];
-  // authoritative reconciliation: if server moves differ from local history, rebuild
-  var local = S.chess.history({ verbose: true }).map(function (m) { return m.from + m.to + (m.promotion || ""); });
-  var same = moves.length === local.length && moves.every(function (m, i) { return m === local[i]; });
-  if (!same) {
-    var fresh = new Chess(S.game && S.game.initialFen && S.game.initialFen !== "startpos" ? S.game.initialFen : undefined);
-    var ok = true;
-    moves.forEach(function (uci) {
-      try { fresh.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] || undefined }); }
-      catch (e) { ok = false; }
+  function gameDayStats(feed){
+    // per-day games from the public activity feed (intervals are UTC days)
+    var days={};
+    (feed||[]).forEach(function(x){
+      if(!x.games) return;
+      var d=x.interval.start, n=0, w=0, l=0, dr=0;
+      Object.keys(x.games).forEach(function(gk){ var g=x.games[gk]; n+=(g.win||0)+(g.loss||0)+(g.draw||0); w+=(g.win||0); l+=(g.loss||0); dr+=(g.draw||0); });
+      days[d]={n:n, w:w, l:l, dr:dr};
     });
-    if (ok) {
-      var prevLen = local.length;
-      S.chess = fresh;
-      if (moves.length > prevLen) {
-        var lastUci = moves[moves.length - 1];
-        var cap = S.chess.history({ verbose: true });
-        var last = cap[cap.length - 1];
-        if (last) { if (last.captured) sndCapture(); else sndMove(); if (S.chess.inCheck()) sndCheck(); }
-        S.lastAnim = { from: lastUci.slice(0, 2), to: lastUci.slice(2, 4) };
-      }
-    }
+    return days;
   }
-  S.serverMoves = moves;
-  if (S.pendingUci && moves.indexOf(S.pendingUci) >= 0) { S.pendingUci = null; if (S.conn === "syncing") setConn("connected", "CONNECTED"); }
-  // clocks
-  S.clocks.w = gs.wtime != null ? gs.wtime : S.clocks.w;
-  S.clocks.b = gs.btime != null ? gs.btime : S.clocks.b;
-  S.clocks.winc = gs.winc != null ? gs.winc : S.clocks.winc;
-  S.clocks.binc = gs.binc != null ? gs.binc : S.clocks.binc;
-  S.clocks.turn = S.chess.turn();
-  S.clocks.at = performance.now();
-  // premove: now my turn? fire it
-  if (S.premove && S.chess.turn() === (S.myColor === "white" ? "w" : "b") && !S.gameEnded) {
-    var pm = S.premove; S.premove = null;
-    doMove(pm.from, pm.to, pm.promotion, true);
-  }
-  if (gs.status && gs.status !== "started" && gs.status !== "created") {
-    endGame(gs.status, gs.winner);
-  }
-}
-function endGame(status, winner) {
-  if (S.gameEnded) return;
-  S.gameEnded = true;
-  S.pendingUci = null; S.premove = null;
-  if (S.seekCtrl) { try { S.seekCtrl.abort(); } catch (e) {} S.seeking = false; updatePlayBtn(); }
-  sndEnd();
-  var meWon = winner ? (winner === S.myColor) : null;
-  var label;
-  if (status === "mate") label = meWon ? "CHECKMATE — YOU WIN" : "CHECKMATE — YOU LOSE";
-  else if (status === "resign") label = meWon ? "OPPONENT RESIGNED — YOU WIN" : "YOU RESIGNED";
-  else if (status === "timeout" || status === "outoftime") label = meWon ? "TIME — YOU WIN" : "TIME — YOU LOSE";
-  else if (status === "stalemate") label = "STALEMATE — DRAW";
-  else if (status === "draw") label = "DRAW";
-  else if (status === "aborted") label = "GAME ABORTED";
-  else label = status.toUpperCase();
-  var hist = S.chess.history({ verbose: true });
-  var last = hist[hist.length - 1];
-  var res = $("#endResult");
-  res.textContent = label;
-  res.className = "res " + (meWon === true ? "win" : meWon === false ? "lose" : "");
-  $("#endSub").textContent = (S.game ? ((S.game.white.name || "?") + " vs " + (S.game.black.name || "?")) : "") + " · " + (S.game && S.game.speed ? S.game.speed : "");
-  $("#endFinal").textContent = last ? ("Final move: " + last.san + "  ·  " + hist.length + " plies") : "";
-  $("#endOverlay").classList.add("show");
-  S.endShown = true;
-  refreshOngoing();
-}
-
-/* ---------------- clocks ---------------- */
-function fmtClock(ms) {
-  if (ms == null || isNaN(ms)) return "--:--";
-  ms = Math.max(0, Math.round(ms));
-  var s = Math.floor(ms / 1000), m = Math.floor(s / 60), sec = s % 60;
-  var tenths = Math.floor((ms % 1000) / 100);
-  if (m >= 20) return m + ":" + String(sec).padStart(2, "0");
-  if (m > 0) return m + ":" + String(sec).padStart(2, "0");
-  return "0:" + String(sec).padStart(2, "0") + "." + tenths;
-}
-function tickClocks() {
-  if (!S.game || S.gameEnded) return;
-  var now = performance.now();
-  var elapsed = now - S.clocks.at;
-  var w = S.clocks.w, b = S.clocks.b;
-  if (S.clocks.turn === "w") w = Math.max(0, w - elapsed); else b = Math.max(0, b - elapsed);
-  var myIsWhite = S.myColor === "white";
-  // top clock is the OPPONENT, bottom clock is ME — never swap them
-  var topColor = myIsWhite ? "b" : "w";
-  var topMs = topColor === "w" ? w : b;
-  var botMs = topColor === "w" ? b : w;
-  var topEl = $("#oppClock"), botEl = $("#meClock");
-  topEl.textContent = fmtClock(topMs);
-  botEl.textContent = fmtClock(botMs);
-  var activeIsTop = S.clocks.turn === topColor;
-  topEl.classList.toggle("active", activeIsTop);
-  botEl.classList.toggle("active", !activeIsTop);
-  topEl.classList.toggle("low", topMs <= 10000);
-  botEl.classList.toggle("low", botMs <= 10000);
-}
-setInterval(tickClocks, 100);
-
-/* ---------------- chat ---------------- */
-function addChat(user, text, room) {
-  var log = $("#chatLog");
-  var empty = log.querySelector(".empty");
-  if (empty) empty.remove();
-  var div = document.createElement("div");
-  div.innerHTML = '<span class="who">' + esc(user) + ":</span> " + esc(text);
-  log.appendChild(div);
-  log.scrollTop = log.scrollHeight;
-  if ($("#panelChat").classList.contains("hide") && user !== (S.me && S.me.username)) {
-    S.chatUnread++;
-    var b = $("#chatBadge");
-    b.textContent = S.chatUnread;
-    b.classList.remove("hide");
-  }
-}
-function sendChat() {
-  var inp = $("#chatInput");
-  var text = inp.value.trim();
-  if (!text || !S.gameId) return;
-  inp.value = "";
-  apiPost("/api/board/game/" + S.gameId + "/chat", { room: "player", text: text }).then(function () {
-    addChat(S.me.username, text, "player");
-  }).catch(function (e) { toast("Chat failed: " + errText(e), "err"); });
-}
-</script>
-<script>
-"use strict";
-/* ---------------- board ---------------- */
-var FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
-var boardEl = null, squaresEl = {}, piecesLayer = null;
-var pieceEls = {}; // square -> element
-function sqToXY(sq) {
-  var f = FILES.indexOf(sq[0]), r = parseInt(sq[1], 10) - 1;
-  if (S.orient === "white") return { x: f, y: 7 - r };
-  return { x: 7 - f, y: r };
-}
-function xyToSq(x, y) {
-  if (S.orient === "white") return FILES[x] + (8 - y);
-  return FILES[7 - x] + (y + 1);
-}
-function buildBoard() {
-  boardEl = $("#board");
-  boardEl.innerHTML = "";
-  squaresEl = {};
-  pieceEls = {};
-  var grid = document.createElement("div");
-  grid.style.cssText = "position:absolute;inset:0";
-  for (var r = 0; r < 8; r++) {
-    for (var f = 0; f < 8; f++) {
-      var sq = xyToSq(f, r);
-      var d = document.createElement("div");
-      d.className = "sq " + (((f + r) % 2 === 0) ? "l" : "d");
-      d.style.left = (f * 12.5) + "%"; d.style.top = (r * 12.5) + "%";
-      d.dataset.square = sq;
-      if (f === 0) { var cr = document.createElement("span"); cr.className = "coord r"; cr.textContent = sq[1]; d.appendChild(cr); }
-      if (r === 7) { var cf = document.createElement("span"); cf.className = "coord f"; cf.textContent = sq[0]; d.appendChild(cf); }
-      grid.appendChild(d);
-      squaresEl[sq] = d;
-    }
-  }
-  boardEl.appendChild(grid);
-  piecesLayer = document.createElement("div");
-  piecesLayer.style.cssText = "position:absolute;inset:0;z-index:2";
-  boardEl.appendChild(piecesLayer);
-  if (!boardEl.dataset.bound) {
-    boardEl.dataset.bound = "1";
-    boardEl.addEventListener("pointerdown", onBoardPointerDown);
-    boardEl.addEventListener("pointermove", onBoardPointerMove);
-    boardEl.addEventListener("pointerup", onBoardPointerUp);
-    boardEl.addEventListener("pointercancel", onBoardPointerUp);
-  }
-}
-function pieceFile(piece) { return (piece.color === "w" ? "w" : "b") + piece.type.toUpperCase() + ".svg"; }
-function renderPieces(animFrom, animTo) {
-  var bd = S.chess.board();
-  var seen = {};
-  var animEl = null;
-  bd.forEach(function (row, ri) {
-    row.forEach(function (pc, fi) {
-      if (!pc) return;
-      var sq = FILES[fi] + (8 - ri);
-      seen[sq] = true;
-      var xy = sqToXY(sq);
-      var el = pieceEls[sq];
-      var key = pc.color + pc.type;
-      if (!el) {
-        el = document.createElement("div");
-        el.className = "piece";
-        var img = document.createElement("img");
-        img.src = "pieces/" + pieceFile(pc);
-        img.alt = pc.type;
-        img.draggable = false;
-        el.appendChild(img);
-        el.dataset.square = sq;
-        el.dataset.piece = key;
-        piecesLayer.appendChild(el);
-        pieceEls[sq] = el;
-      } else if (el.dataset.piece !== key) {
-        el.dataset.piece = key;
-        el.querySelector("img").src = "pieces/" + pieceFile(pc);
-      }
-      el.style.transform = "translate(" + (xy.x * 100) + "%, " + (xy.y * 100) + "%)";
-      if (animFrom && animTo && sq === animTo) animEl = el;
-    });
-  });
-  Object.keys(pieceEls).forEach(function (sq) {
-    if (!seen[sq]) { var el = pieceEls[sq]; delete pieceEls[sq]; if (el.parentNode) el.parentNode.removeChild(el); }
-  });
-  if (animEl && animFrom) {
-    var fromXY = sqToXY(animFrom);
-    animEl.classList.remove("anim");
-    animEl.style.transform = "translate(" + (fromXY.x * 100) + "%, " + (fromXY.y * 100) + "%)";
-    void animEl.offsetWidth;
-    animEl.classList.add("anim");
-    var toXY = sqToXY(animTo);
-    animEl.style.transform = "translate(" + (toXY.x * 100) + "%, " + (toXY.y * 100) + "%)";
-    setTimeout(function () { animEl.classList.remove("anim"); }, 200);
-  }
-}
-function clearMarkers() {
-  $$(".sq").forEach(function (el) { el.classList.remove("sel", "last", "check"); });
-  $$(".dotm,.ring").forEach(function (el) { el.remove(); });
-}
-function markSquares() {
-  clearMarkers();
-  var hist = S.chess.history({ verbose: true });
-  var last = hist[hist.length - 1];
-  if (last) {
-    if (squaresEl[last.from]) squaresEl[last.from].classList.add("last");
-    if (squaresEl[last.to]) squaresEl[last.to].classList.add("last");
-  }
-  if (S.chess.inCheck()) {
-    var ksq = null;
-    S.chess.board().forEach(function (row, ri) {
-      row.forEach(function (pc, fi) {
-        if (pc && pc.type === "k" && pc.color === S.chess.turn()) ksq = FILES[fi] + (8 - ri);
+  function fetchActivityFeed(){
+    if(!state.user) return;
+    lichessFetch("https://lichess.org/api/user/"+encodeURIComponent(state.user)+"/activity",{headers:{"Accept":"application/json"}},2)
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(arr){
+        if(!arr){
+          /* Never leave "Loading your recent days…" up forever: say it
+             failed and retry on a timer. If days already loaded once,
+             they stay on screen untouched. */
+          if(!state.actLoaded){
+            $("activityList").innerHTML='<p class="desc" style="margin-top:10px">Recent days could not load just now — this page retries automatically in a few seconds. Your other stats are unaffected.</p>';
+            retryLater("activity", fetchActivityFeed, 15000);
+          }
+          return;
+        }
+        state.actLoaded=true;
+        state.gameFeed=arr;
+        var days=gameDayStats(arr);
+        var now=new Date(); var todayStart=weekDayStart(now);
+        // games today (any mode)
+        var t=days[todayStart]||{n:0,w:0,l:0,dr:0};
+        state.todayExact=t.n;
+        try{ lsSet(LS.today, JSON.stringify({d:new Date().toISOString().slice(0,10), n:t.n})); }catch(e){}
+        // recent win rate + totals
+        var W=0,L=0,D=0; Object.keys(days).forEach(function(k){ W+=days[k].w; L+=days[k].l; D+=days[k].dr; });
+        var all=W+L+D, wr=all?Math.round(W/all*100):null;
+        // current win streak (approx.): newest first, a day with a loss breaks it
+        var keys=Object.keys(days).map(Number).sort(function(a,b){return b-a;});
+        var streak=0;
+        for(var i=0;i<keys.length;i++){ var dd=days[keys[i]]; if(dd.l>0) break; streak+=dd.w; }
+        state.winStreak=streak;
+        // day streak: consecutive UTC days with >=1 game, ending today/yesterday
+        var dstreak=0, cursor=new Date(todayStart);
+        if(!days[cursor.getTime()]) cursor=new Date(cursor.getTime()-86400000);
+        while(days[cursor.getTime()]){ dstreak++; cursor=new Date(cursor.getTime()-86400000); }
+        state.dayStreak=dstreak;
+        // tiles
+        $("tToday").textContent=fmt(t.n);
+        $("tTodaySub").textContent="Exact from your game activity · "+t.w+" won · Day streak: "+dstreak;
+        $("flameIc").textContent = dstreak>0 ? "🔥×"+dstreak : "";
+        $("tWinRate").textContent=wr==null?"—":wr+"%";
+        $("tWinRateSub").textContent=fmt(W)+" won · "+fmt(L)+" lost · "+fmt(D)+" drawn in your recent days";
+        $("tWinStreak").textContent=fmt(streak);
+        $("tWinStreakSub").textContent=streak>=3?"You're hot. Protect it.":"Win the next one to start a run";
+        $("tDayStreak").textContent=fmt(dstreak)+(dstreak===1?" day":" days");
+        $("tDayStreakSub").textContent=dstreak>0?"Days in a row with at least one game — don't break the chain":"Play a game today to start";
+        if(state.profile){ applyProfile(state.profile,false); renderBadges(state.total); }
+        // recent battle days
+        var rows = arr.filter(function(x){ return x.games; }).slice(0,5);
+        $("activityList").innerHTML = rows.length ? rows.map(function(x){
+          var day = new Date(x.interval.start).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
+          var chips=[];
+          Object.keys(x.games).forEach(function(gk){ var g=x.games[gk]; var rp=(g.rp)?' · '+fmt(g.rp.before)+' → '+fmt(g.rp.after):''; chips.push('<span class="chip"><b>'+(SPEEDNAME[gk]||gk)+'</b>&nbsp;'+g.win+'W-'+g.loss+'L'+(g.draw?'-'+g.draw+'D':'')+rp+'</span>'); });
+          return '<div class="actrow"><span class="day">'+day+'</span>'+chips.join("")+'</div>';
+        }).join("") : '<p class="desc" style="margin-top:10px">No games recorded yet.</p>';
+        renderWeek();
+      })
+      .catch(function(){
+        if(!state.actLoaded){
+          $("activityList").innerHTML='<p class="desc" style="margin-top:10px">Recent days could not load just now — this page retries automatically in a few seconds. Your other stats are unaffected.</p>';
+          retryLater("activity", fetchActivityFeed, 15000);
+        }
       });
-    });
-    if (ksq && squaresEl[ksq]) squaresEl[ksq].classList.add("check");
   }
-  if (S.selected) {
-    if (squaresEl[S.selected]) squaresEl[S.selected].classList.add("sel");
-    S.legal.forEach(function (m) {
-      var el = squaresEl[m.to];
-      if (!el) return;
-      var dot = document.createElement("div");
-      dot.className = m.captured ? "ring" : "dotm";
-      el.appendChild(dot);
-    });
-  }
-  if (S.premove && squaresEl[S.premove.to]) squaresEl[S.premove.to].classList.add("sel");
-}
-function renderMoves() {
-  var hist = S.chess.history({ verbose: true });
-  var html = "";
-  if (!hist.length) html = "No moves yet.";
-  else {
-    for (var i = 0; i < hist.length; i += 2) {
-      var n = i / 2 + 1;
-      html += '<span class="mn">' + n + '.</span> <span class="mv' + (i === hist.length - 1 ? " cur" : "") + '">' + esc(hist[i].san) + "</span> ";
-      if (hist[i + 1]) html += '<span class="mv' + (i + 1 === hist.length - 1 ? " cur" : "") + '">' + esc(hist[i + 1].san) + "</span> ";
-    }
-  }
-  $("#moves").innerHTML = html;
-  $("#movesDesk").innerHTML = html;
-}
-function renderPlayers() {
-  if (!S.game) return;
-  var myIsWhite = S.myColor === "white";
-  var opp = myIsWhite ? S.game.black : S.game.white;
-  var me = myIsWhite ? S.game.white : S.game.black;
-  $("#oppName").textContent = "@" + (opp.name || opp.id || "?");
-  $("#oppMeta").textContent = (opp.rating ? opp.rating + " · " : "") + (S.game.rated ? "Rated" : "Casual") + " · " + (S.game.perf && S.game.perf.name ? S.game.perf.name : S.game.speed || "");
-  $("#oppAv").textContent = (opp.name || "?").charAt(0).toUpperCase();
-  $("#meName").textContent = "@" + (me.name || me.id || "?") + " (you)";
-  $("#meMeta").textContent = (me.rating ? me.rating + " · " : "") + (S.myColor === "white" ? "White" : "Black");
-  $("#meAv").textContent = (me.name || "?").charAt(0).toUpperCase();
-}
-function renderAll() {
-  renderPlayers();
-  if (S.lastAnim) { renderPieces(S.lastAnim.from, S.lastAnim.to); S.lastAnim = null; }
-  else renderPieces();
-  markSquares();
-  renderMoves();
-  updateDock();
-}
-function updateDetails() {
-  if (!S.game) { $("#details").textContent = "—"; return; }
-  var g = S.game;
-  $("#details").innerHTML =
-    "<b>Game:</b> " + esc(g.id) + "<br>" +
-    "<b>Variant:</b> " + esc(g.variant && (g.variant.name || g.variant.key) || "Standard") + "<br>" +
-    "<b>Speed:</b> " + esc(g.speed || "—") + "<br>" +
-    "<b>Rated:</b> " + (g.rated ? "Yes" : "No") + "<br>" +
-    "<b>Clock:</b> " + (g.clock ? (g.clock.initial / 60000) + " min + " + (g.clock.increment / 1000) + " s" : "—") + "<br>" +
-    "<b>White:</b> " + esc(g.white.name || g.white.id || "?") + (g.white.rating ? " (" + g.white.rating + ")" : "") + "<br>" +
-    "<b>Black:</b> " + esc(g.black.name || g.black.id || "?") + (g.black.rating ? " (" + g.black.rating + ")" : "");
-}
 
-/* ---------------- input: tap + drag ---------------- */
-function squareFromEvent(e) {
-  var rect = boardEl.getBoundingClientRect();
-  var x = Math.floor((e.clientX - rect.left) / rect.width * 8);
-  var y = Math.floor((e.clientY - rect.top) / rect.height * 8);
-  if (x < 0 || x > 7 || y < 0 || y > 7) return null;
-  return xyToSq(x, y);
-}
-function myTurn() {
-  return S.game && !S.gameEnded && S.chess.turn() === (S.myColor === "white" ? "w" : "b");
-}
-function legalFrom(sq) {
-  try { return S.chess.moves({ square: sq, verbose: true }); } catch (e) { return []; }
-}
-/* Legal moves for MY color even when it is not my turn (needed for premoves).
-   chess.js only generates moves for the side to move, so flip the turn in a
-   throwaway copy of the position. The server validates the real move anyway. */
-function myLegalFrom(sq) {
-  var my = S.myColor === "white" ? "w" : "b";
-  if (S.chess.turn() === my) return legalFrom(sq);
-  try {
-    var parts = S.chess.fen().split(" ");
-    parts[1] = my;
-    var tmp = new Chess(parts.join(" "));
-    return tmp.moves({ square: sq, verbose: true });
-  } catch (e) { return []; }
-}
-function selectSquare(sq) {
-  var pc = S.chess.get(sq);
-  if (pc && pc.color === (S.myColor === "white" ? "w" : "b")) {
-    S.selected = sq;
-    S.legal = myLegalFrom(sq);
-    markSquares();
-    return true;
+  /* ---------- DEEP STATS (TOKEN) ---------- */
+  function authHeaders(){ return {"Accept":"application/json","Authorization":"Bearer "+state.token}; }
+  function sanitizeToken(raw){
+    var t=(raw||"").replace(/[\s\u200B\u200C\u200D\uFEFF]+/g,"");
+    t=t.replace(/^["']+|["']+$/g,"");
+    if(/^bearer/i.test(t)) t=t.slice(6);
+    return t;
   }
-  return false;
-}
-function onBoardPointerDown(e) {
-  if (!S.game || S.gameEnded) return;
-  var sq = squareFromEvent(e);
-  if (!sq) return;
-  var pc = S.chess.get(sq);
-  var mine = pc && pc.color === (S.myColor === "white" ? "w" : "b");
-  if (mine) {
-    S.drag = { from: sq, x0: e.clientX, y0: e.clientY, moved: false, el: pieceEls[sq] || null };
-    if (S.drag.el) { try { boardEl.setPointerCapture(e.pointerId); } catch (err) {} }
+  function bodyError(txt,status){
+    try{ var j=JSON.parse(txt); if(j&&j.error) return String(j.error); }catch(e){}
+    return "HTTP "+status;
   }
-}
-function onBoardPointerMove(e) {
-  if (!S.drag || !S.drag.el) return;
-  var dx = e.clientX - S.drag.x0, dy = e.clientY - S.drag.y0;
-  if (Math.abs(dx) + Math.abs(dy) > 8) S.drag.moved = true;
-  if (S.drag.moved) {
-    var rect = boardEl.getBoundingClientRect();
-    var base = sqToXY(S.drag.from);
-    S.drag.el.classList.add("drag");
-    S.drag.el.style.transform = "translate(calc(" + (base.x * 100) + "% + " + dx + "px), calc(" + (base.y * 100) + "% + " + dy + "px))";
+  function tokenErr(kind,msg){ var e=new Error(msg); e.kind=kind; return e; }
+  /* Ask Lichess itself whether this token exists, so the user gets
+     Lichess's exact reason instead of a generic "cannot load" — the check
+     is GET /api/account (see testToken below); whether puzzle:read is
+     ticked is proven by the puzzle dashboard itself inside loadDeep. */
+  function waitMs(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
+  /* Transport layer for every Lichess request on this page.
+     Diagnosis (verified 6 Nov 2026): lichess.org itself loads fine in the
+     user's Chrome and Lichess's CORS answers are textbook (ACAO:* and a
+     preflight that allows Authorization — checked directly), yet this
+     page's cross-origin API calls from the public website link kept
+     failing in Chrome/Brave while the identical page worked inside the
+     Muse app. So the fault sits in the page's fetch path in that browser
+     context, not in Lichess and not in the user's network. The answer is
+     to stop depending on one request shape:
+       - attempts rotate between fetch() and XMLHttpRequest — different
+         browser code paths, so a context that breaks one often passes
+         the other;
+       - every attempt has a 30s timeout (60s for the big puzzle-activity stream), so a request that stalls
+         (rather than failing fast) is aborted and retried instead of
+         hanging the load forever;
+       - requests are sent with credentials omitted, no referrer and
+         no-store caching — the plainest cross-origin shape there is.
+     On top of that, Lichess's own API docs (checked 6 Nov 2026) say:
+     "Only make one request at a time" and, on a 429, "waiting one minute
+     before retrying will be sufficient" — and an independent live test
+     found parallel calls answered with 429 {"error":"Please only run 1
+     request(s) at a time"}. This page originally fired its profile,
+     history, per-speed, activity, token-check and
+     puzzle-activity calls in parallel and retried failures immediately —
+     a textbook way to get rate-limited, after which every error was
+     collapsed into "Lichess could not be reached". So now EVERY Lichess
+     call on this page goes through one queue (lichessFetch below): one
+     request in flight at a time, ever. 5xx answers retry with short
+     backoff; a 401/403 is a real verdict and returns immediately. When
+     every transport fails, the thrown error names the actual failure so
+     the page can show it instead of guessing.
+     Second diagnosis (verified 6 Nov 2026 by calling the public API
+     directly — every endpoint for this account answers 200 in about a
+     second, no account or token needed): the endpoints are healthy, so
+     the remaining faults were in this page's own queue handling. A 429
+     used to wait a full 60 seconds INSIDE its queue slot, freezing
+     every section queued behind it on "Loading…" for minutes; a manual
+     Refresh that arrived while a profile fetch was in flight was
+     silently dropped yet still toasted "Refreshed ✓"; and the activity
+     feed swallowed failures, leaving "Loading your recent days…"
+     forever. Fixes: a 429 is now returned to its caller immediately
+     (the deep-stats loader already has its own patient retry schedule;
+     public sections schedule their own retry), Refresh reuses/awaits
+     the real fetch and only claims success when Lichess answered, and
+     every section surfaces a retrying state instead of hanging. */
+  function asResponse(res){
+    return { ok:res.ok, status:res.status,
+      text:function(){ return Promise.resolve(res.txt); },
+      json:function(){ return Promise.resolve(JSON.parse(res.txt)); } };
   }
-}
-function onBoardPointerUp(e) {
-  var d = S.drag; S.drag = null;
-  if (!S.game || S.gameEnded) return;
-  var sq = squareFromEvent(e);
-  if (d && d.el) d.el.classList.remove("drag");
-  if (!sq) { renderPieces(); return; }
-  if (d && d.moved) {
-    if (sq !== d.from) { tryMove(d.from, sq); return; }
-    renderPieces(); // dropped back on its own square: snap back, then tap-select
+  function rawFetch(url, opts){
+    return new Promise(function(resolve, reject){
+      var ctrl = ("AbortController" in window) ? new AbortController() : null;
+      var ms = (opts && opts.timeoutMs) || 30000;
+      var to = setTimeout(function(){ if(ctrl) ctrl.abort(); }, ms);
+      var o = { method:(opts&&opts.method)||"GET", headers:(opts&&opts.headers)||{}, mode:"cors", credentials:"omit", cache:"no-store", referrerPolicy:"no-referrer" };
+      if(opts && opts.body!=null) o.body = opts.body;
+      if(ctrl) o.signal = ctrl.signal;
+      fetch(url, o).then(function(r){
+        return r.text().then(function(txt){ clearTimeout(to); resolve({ok:r.ok, status:r.status, txt:txt}); }, function(e){ clearTimeout(to); reject(e); });
+      }, function(e){ clearTimeout(to); reject(e); });
+    });
   }
-  // tap logic
-  if (S.selected && S.selected !== sq) {
-    var mv = S.legal.find(function (m) { return m.to === sq; });
-    if (mv) { tryMove(S.selected, sq); return; }
+  function rawXhr(url, opts){
+    return new Promise(function(resolve, reject){
+      var x = new XMLHttpRequest();
+      try{ x.open((opts&&opts.method)||"GET", url, true); }catch(e){ reject(e); return; }
+      x.timeout = (opts && opts.timeoutMs) || 30000;
+      var h = (opts&&opts.headers)||{};
+      Object.keys(h).forEach(function(k){ try{ x.setRequestHeader(k, h[k]); }catch(e){} });
+      x.onload = function(){ resolve({ok:x.status>=200 && x.status<300, status:x.status, txt:x.responseText||""}); };
+      x.onerror = function(){ reject(new Error("XMLHttpRequest network error")); };
+      x.ontimeout = function(){ reject(new Error("XMLHttpRequest timed out")); };
+      x.onabort = function(){ reject(new Error("XMLHttpRequest aborted")); };
+      try{ x.send((opts&&opts.body)!=null ? opts.body : null); }catch(e){ reject(e); }
+    });
   }
-  if (!selectSquare(sq)) { S.selected = null; S.legal = []; markSquares(); }
-}
-function tryMove(from, to, promotion) {
-  if (!S.game || S.gameEnded) return;
-  var moves = myLegalFrom(from).filter(function (m) { return m.to === to; });
-  if (!moves.length) { S.selected = null; S.legal = []; markSquares(); return; }
-  var needsPromo = moves.some(function (m) { return m.flags.indexOf("p") >= 0; });
-  if (needsPromo && !promotion) {
-    S.promoPending = { from: from, to: to };
-    $("#promoSheet").classList.add("show");
-    return;
+  /* The one queue every Lichess call passes through: strictly one request
+     in flight at a time, in the order the page asked for them. */
+  var lichessQueue = Promise.resolve();
+  function lichessFetch(url, opts, tries){
+    var job = lichessQueue.then(function(){ return lichessAttempt(url, opts, tries); });
+    lichessQueue = job.then(function(){}, function(){});
+    return job;
   }
-  doMove(from, to, promotion || "q", false);
-}
-function doMove(from, to, promotion, isPremove) {
-  var uci = null;
-  var mv = null;
-  try {
-    var test = myLegalFrom(from).find(function (m) { return m.to === to; });
-    if (!test) return;
-    var isPromo = test.flags.indexOf("p") >= 0;
-    uci = from + to + (isPromo ? (promotion || "q") : "");
-    if (!isPremove && !myTurn()) {
-      // not my turn: store as premove
-      S.premove = { from: from, to: to, promotion: isPromo ? (promotion || "q") : null };
-      S.selected = null; S.legal = [];
-      markSquares();
-      toast("Premove set: " + test.san);
+  function lichessAttempt(url, opts, tries){
+    var max = tries || 3, attempt = 0;
+    function once(){
+      attempt++;
+      var p = (attempt % 2 === 0) ? rawXhr(url, opts) : rawFetch(url, opts);
+      return p.then(function(res){
+        /* A 429 goes straight back to the caller — never park on it here.
+           Waiting inside the queue slot froze every later request (and
+           every section still showing "Loading…") for a full minute. */
+        if(res.status>=500 && attempt<max){
+          return waitMs(600*Math.pow(2,attempt-1)+300).then(once);
+        }
+        return asResponse(res);
+      }, function(err){
+        if(attempt<max) return waitMs(600*Math.pow(2,attempt-1)+300).then(once);
+        var e = new Error("the request to Lichess did not get through from this page after "+attempt+" tries across both fetch and XMLHttpRequest — last failure: "+((err&&err.name)||"Error")+((err&&err.message && err.message!==err.name)?" ("+err.message+")":""));
+        e.transportFailed = true;
+        throw e;
+      });
+    }
+    return once();
+  }
+  /* Sections retry themselves after a failed load instead of sitting on
+     a "Loading…" placeholder forever: one pending retry per section. */
+  function retryLater(key, fn, delay){
+    var slot = "rt_"+key;
+    if(state[slot]) return;
+    state[slot] = setTimeout(function(){ state[slot]=null; fn(); }, delay||15000);
+  }
+  function deepErr(status, txt, what){
+    var e = new Error(what+" — Lichess answered HTTP "+status+": "+bodyError(txt,status));
+    e.status = status; e.kind = (status===401) ? "invalid" : (status===403 ? "scope" : (status===429 ? "ratelimit" : "network"));
+    return e;
+  }
+  function clearDeepRetry(){ if(state.deepRetryTimer){ clearTimeout(state.deepRetryTimer); state.deepRetryTimer=null; } }
+  function scheduleDeepRetry(){
+    if(!state.token || state.deepRetries>=4) return;
+    clearDeepRetry();
+    var delays=[8000,20000,45000,90000];
+    var delay=delays[Math.min(state.deepRetries, delays.length-1)];
+    state.deepRetries++;
+    setTokenStatus("⏳ <b>Token saved on this phone — puzzle review not loaded yet.</b> Lichess did not answer the last try. This page will retry by itself in about "+Math.round(delay/1000)+" seconds — keep this tab open — or tap <b>Retry puzzle review</b> at the top to try right away. Your token stays saved either way; there is nothing to paste again.");
+    state.deepRetryTimer=setTimeout(function(){ state.deepRetryTimer=null; loadDeep(false); }, delay);
+  }
+  /* Validate the token with GET /api/account: an ordinary authenticated
+     GET whose 200 response carries Access-Control-Allow-Origin: *, and
+     whose body names the account the token belongs to. 200 = token real,
+     401 = token unknown/deleted, 403 = refused.
+     The old POST /api/token/test check was dropped on purpose: per
+     Lichess's own API spec that endpoint wants the tokens in a text/plain
+     request body with no Authorization header (it is a bulk server-side
+     testing tool, up to 1,000 tokens), and its 200 response lists no
+     Access-Control-Allow-Origin header — unlike /api/account, the user
+     and the puzzle endpoints — so a browser frequently cannot read its
+     answer even when the call itself succeeds.
+     Whether puzzle:read is ticked cannot be read cross-origin (the scope
+     response headers are not exposed to page JavaScript), so that verdict
+     comes from the puzzle activity call itself inside loadDeep: 401 there =
+     token unknown, 403 = puzzle:read missing. The token is only ever sent
+     to lichess.org — never through any proxy or third party. */
+  function testToken(t){
+    var auth={"Accept":"application/json","Authorization":"Bearer "+t};
+    return lichessFetch("https://lichess.org/api/account",{headers:auth},3)
+      .then(function(r){
+        return r.text().then(function(txt){
+          if(r.ok){
+            var d=null; try{ d=JSON.parse(txt); }catch(e){}
+            var name=(d && (d.username||d.id)) || state.user || "";
+            return {name:name, scopes:null};
+          }
+          if(r.status===401) throw tokenErr("invalid","Lichess says this token is unknown ("+bodyError(txt,r.status)+") — so it isn't a permissions problem, the token itself reads as unknown or deleted. Create a fresh token on the Lichess page, tap Copy on the full code (it starts with lip_) and paste it here in one go.");
+          if(r.status===403) throw tokenErr("scope","Lichess refused this token (HTTP 403: "+bodyError(txt,r.status)+"). Create a new token, tick only puzzle:read, and paste that one here.");
+          if(r.status===429) throw tokenErr("network","Lichess is rate-limiting right now (HTTP 429) — too many requests in a burst. Your token has NOT been judged wrong. Wait about a minute, then tap Unlock puzzle review once.");
+          throw tokenErr("network","Lichess answered the token check with "+bodyError(txt,r.status)+" (HTTP "+r.status+"). That is Lichess answering — not a verdict on your token.");
+        });
+      }, function(e){
+        throw tokenErr("network","The token check did not get through from this page — "+((e&&e.message)||"the request failed")+". Your token has NOT been judged wrong, and a token saved on this phone stays saved.");
+      });
+  }
+  function setTokenStatus(html){
+    var s=$("tokenStatus"); if(!s) return;
+    if(html){ s.innerHTML=html; s.classList.remove("hidden"); } else { s.innerHTML=""; s.classList.add("hidden"); }
+  }
+  function loadDeep(manual){
+    if(!state.token || state.deepBusy) return;
+    var rb=$("deepRetry"); if(rb) rb.classList.remove("hidden");
+    state.deepBusy=true; state.lastDeep=Date.now();
+    var errs=[];
+    var hardVerdict=null;
+    function done(){
+      state.deepBusy=false;
+      if(!errs.length){
+        $("tokenError").style.display="none";
+        state.deepLoaded=true;
+        state.deepRetries=0; clearDeepRetry();
+        return;
+      }
+      if(hardVerdict){
+        /* Lichess itself refused this token (401 unknown / 403 missing
+           puzzle:read): a real verdict, not a dropped connection. Say
+           exactly that, forget the saved copy so the page stops retrying
+           a dead token, and leave the paste box ready for a fresh one. */
+        showTokenError(hardVerdict.message);
+        state.token=null; state.tokenUser=null; state.remembered=false;
+        lsDel(LS.token);
+        $("tokenDisconnect").classList.add("hidden");
+        var rb2=$("deepRetry"); if(rb2) rb2.classList.add("hidden");
+        clearDeepRetry();
+        return;
+      }
+      if(manual || state.deepRetries===0) showTokenError(errs[0]);
+      scheduleDeepRetry();
+    }
+    // puzzle activity stream (NDJSON) — the only token-gated call.
+    // It proves puzzle:read by itself: 401 = token unknown, 403 = scope missing.
+    lichessFetch("https://lichess.org/api/puzzle/activity?max=1000&since="+(Date.now()-14*86400000),{headers:{"Accept":"application/x-ndjson","Authorization":"Bearer "+state.token}, timeoutMs:60000})
+      .then(function(r){ return r.text().then(function(txt){ if(!r.ok) throw deepErr(r.status, txt, "Your puzzle activity did not load"); return txt; }); })
+      .then(function(txt){
+        var items=[]; var trimmed=(txt||"").trim();
+        if(trimmed.charAt(0)==="["){ try{ items=JSON.parse(trimmed)||[]; }catch(e){ items=[]; } }
+        else if(trimmed){ items=trimmed.split("\n").filter(Boolean).map(function(l){ try{return JSON.parse(l);}catch(e){return null;} }).filter(Boolean); }
+        state.activity=items;
+        state.srsAll=items;
+        if(items.length) state.srsOldest=items[items.length-1].date;
+        var autoN=srsSync(items);
+        state.srsLoaded=true;
+        renderSRS(autoN);
+        if(manual) toast("Puzzle review unlocked — your wrong puzzles are live ✓");
+        done();
+      }).catch(function(e){
+        if(e && e.status){ if(e.kind==="invalid"||e.kind==="scope") hardVerdict=e; errs.push(e.message+"."); }
+        else errs.push("Your puzzle activity did not load — "+((e&&e.message)?e.message:"the request did not get through")+".");
+        done();
+      });
+  }
+  /* ---------- PUZZLE REVIEW — SPACED REPETITION (SM-2) ---------- */
+  function srsLoad(){
+    try{ var raw=lsGet(LS.srs); state.srs=raw?JSON.parse(raw):{}; }catch(e){ state.srs={}; }
+    if(!state.srs || typeof state.srs!=="object") state.srs={};
+  }
+  function srsSave(){ try{ lsSet(LS.srs, JSON.stringify(state.srs)); }catch(e){} }
+  function srsTodayStart(){ var n=new Date(); return Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate()); }
+  function srsDueInDays(card){
+    var ts=srsTodayStart();
+    return Math.max(0, Math.floor((card.due-ts)/86400000));
+  }
+  // Faithful SuperMemo SM-2, binary quality: 4 = Got it, 2 = Still stuck.
+  // Pure function (no DOM, no storage) so it can be tested on its own.
+  function srsStep(card, quality){
+    var c={r:card.r, t:(card.t||[]).slice(), reps:card.reps||0, ef:(card.ef==null?2.5:card.ef), ivl:card.ivl||0, due:card.due, created:card.created, last:card.last, auto:card.auto||false};
+    var ts=srsTodayStart();
+    if(quality>=3){
+      c.reps+=1;
+      c.ivl = c.reps===1 ? 1 : c.reps===2 ? 6 : Math.round(c.ivl*c.ef);
+      // SM-2 quality 4 leaves EF unchanged: EF + (0.1 - 1*(0.08 + 1*0.02)) = EF + 0
+    } else {
+      c.reps=0;
+      c.ivl=1;
+      c.ef=Math.max(1.3, c.ef-0.32); // SM-2 quality 2: EF + (0.1 - 3*(0.08 + 3*0.02)) = EF - 0.32
+    }
+    c.due = ts + c.ivl*86400000;
+    c.last = Date.now();
+    c.auto=false;
+    return c;
+  }
+  function srsCardFor(item){
+    var pz=item.puzzle||{};
+    return {r:pz.rating||null, t:(pz.themes||[]).slice(0,3), reps:0, ef:2.5, ivl:0, due:Date.now(), created:item.date, last:0, auto:false};
+  }
+  // Merge freshly fetched puzzle activity into the card store.
+  // Latest attempt per puzzle id decides: a later win means he fixed it
+  // (no card, or auto-advance an existing one); a latest loss means review.
+  // Returns how many cards were auto-advanced (re-solved on Lichess).
+  function srsSync(items){
+    srsLoad();
+    var autoN=0;
+    var latest={};
+    // Pick by newest date, not by array position, so the verdict is the
+    // same no matter which order the stream arrives in (Lichess sends
+    // newest first, but never trust position alone for a decision).
+    items.forEach(function(a){ var id=a.puzzle&&a.puzzle.id; if(!id) return; if(!latest[id] || a.date>latest[id].date) latest[id]=a; });
+    var ids=Object.keys(latest);
+    ids.forEach(function(id){
+      var a=latest[id]; var card=state.srs[id];
+      if(!card || !a.win) return;
+      var since=card.last||card.created||0;
+      if(a.date>since){ state.srs[id]=srsStep(card,4); state.srs[id].auto=true; autoN++; }
+    });
+    ids.forEach(function(id){
+      var a=latest[id];
+      if(a.win || state.srs[id]) return;
+      state.srs[id]=srsCardFor(a);
+    });
+    srsSave();
+    return autoN;
+  }
+  function srsWrongItems(){
+    return (state.srsAll||[]).filter(function(a){ return !a.win; });
+  }
+  function srsDueCards(){
+    var ts=srsTodayStart();
+    return Object.keys(state.srs).map(function(id){ return {id:id, card:state.srs[id]}; })
+      .filter(function(x){ return x.card.due < ts+86400000; })
+      .sort(function(a,b){ return a.card.due-b.card.due; });
+  }
+  function srsStateText(card){
+    if(!card.reps) return "New";
+    var d=srsDueInDays(card);
+    return d<=0 ? "Due today" : "in "+d+" day"+(d===1?"":"s");
+  }
+  function srsRowHtml(id, card, withBtns){
+    var th=(card.t||[]).slice(0,2).join(" · ");
+    var when=card.created?new Date(card.created).toLocaleDateString("en-GB",{day:"numeric",month:"short"})+" "+new Date(card.created).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}):"";
+    var due=srsDueInDays(card)<=0 || !card.reps;
+    var chip='<span class="duechip'+(due?" due":" soon")+'">'+srsStateText(card)+'</span>';
+    var btns=withBtns?'<button class="mini go" type="button" data-srs="got" data-pid="'+id+'">Got it ✓</button><button class="mini no" type="button" data-srs="stuck" data-pid="'+id+'">Still stuck ✗</button>':"";
+    return '<li><span class="res loss">✗</span><span><b>#'+id+'</b> <span class="meta">· rated '+fmt(card.r)+(th?" · "+th:"")+'</span><br><span class="meta">'+when+'</span> '+chip+'</span>'+btns+'<a href="https://lichess.org/training/'+id+'" target="_blank" rel="noopener">Retry ↗</a></li>';
+  }
+  function renderSRS(autoN){
+    $("srsLocked").classList.add("hidden");
+    $("srsLive").classList.remove("hidden");
+    var due=srsDueCards();
+    $("srsDueCount").textContent=fmt(due.length);
+    var total=Object.keys(state.srs).length;
+    $("srsSummary").textContent=fmt(total)+" card"+(total===1?"":"s")+" in review";
+    var note=$("srsAutoNote");
+    if(autoN>0){ note.style.display=""; note.textContent="Auto-marked "+autoN+" puzzle"+(autoN===1?"":"s")+" you re-solved on Lichess ✓"; }
+    else { note.style.display="none"; note.textContent=""; }
+    $("srsDueList").innerHTML=due.map(function(x){ return srsRowHtml(x.id, x.card, true); }).join("");
+    $("srsDueEmpty").style.display=due.length?"none":"";
+    var wrong=srsWrongItems();
+    $("srsWrongDesc").textContent="Your wrong puzzles from the last 14 days, newest first. Tap “Load older wrong puzzles” to go further back.";
+    if(!wrong.length){
+      $("srsWrongList").innerHTML='<p class="desc" style="margin-top:10px">No wrong puzzles yet — solve puzzles on Lichess and they will appear here.</p>';
+    } else {
+      $("srsWrongList").innerHTML=wrong.map(function(a){ var id=a.puzzle&&a.puzzle.id; var card=state.srs[id]; if(!card) return ""; return srsRowHtml(id, card, false); }).join("") || '<p class="desc" style="margin-top:10px">No wrong puzzles yet — solve puzzles on Lichess and they will appear here.</p>';
+    }
+    var older=$("srsLoadOlder");
+    if(older){ older.disabled=false; older.textContent="Load older wrong puzzles"; }
+  }
+  function srsReview(id, quality){
+    var card=state.srs[id]; if(!card) return;
+    state.srs[id]=srsStep(card, quality);
+    srsSave();
+    var ivl=state.srs[id].ivl;
+    renderSRS(0);
+    toast(quality>=3 ? "Nice — next review in "+ivl+" day"+(ivl===1?"":"s")+". ✓" : "Back tomorrow — it will come round again. ✗");
+  }
+  function srsLoadOlder(){
+    var btn=$("srsLoadOlder"); if(!btn || btn.disabled || !state.token || !state.srsOldest) return;
+    btn.disabled=true; btn.textContent="Loading older puzzles…";
+    lichessFetch("https://lichess.org/api/puzzle/activity?max=1000&before="+state.srsOldest,{headers:{"Accept":"application/x-ndjson","Authorization":"Bearer "+state.token}, timeoutMs:60000})
+      .then(function(r){ return r.text().then(function(txt){ if(!r.ok) throw deepErr(r.status, txt, "Older puzzle activity did not load"); return txt; }); })
+      .then(function(txt){
+        var items=[]; var trimmed=(txt||"").trim();
+        if(trimmed.charAt(0)==="["){ try{ items=JSON.parse(trimmed)||[]; }catch(e){ items=[]; } }
+        else if(trimmed){ items=trimmed.split("\n").filter(Boolean).map(function(l){ try{return JSON.parse(l);}catch(e){return null;} }).filter(Boolean); }
+        var seen={}; (state.srsAll||[]).forEach(function(a){ seen[(a.puzzle&&a.puzzle.id)+"/"+a.date]=1; });
+        var fresh=items.filter(function(a){ return !seen[(a.puzzle&&a.puzzle.id)+"/"+a.date]; });
+        if(!fresh.length){
+          btn.textContent="No older puzzles found";
+          return;
+        }
+        state.srsAll=state.srsAll.concat(fresh);
+        state.srsOldest=fresh[fresh.length-1].date;
+        var autoN=srsSync(state.srsAll);
+        renderSRS(autoN);
+        toast("Loaded "+fmt(fresh.length)+" older attempts ✓");
+      }).catch(function(){
+        btn.disabled=false; btn.textContent="Load older wrong puzzles";
+        toast("Older puzzles could not load just now — try again.");
+      });
+  }
+  /* ---------- WEEK: Fri–Wed, Thursday = bonus ----------
+     A week runs Friday 00:00 to Wednesday 24:00 (UTC). Thursday is
+     bonus only and never counts in the week. If today IS Thursday,
+     this week is the one that just ended on Wednesday, and today is
+     the bonus day. Games are counted per UTC day from the activity feed. */
+  function weekDayStart(d){ return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); } // Lichess days start at UTC midnight
+  function weekFmt(ts){ var d=new Date(ts); return d.toLocaleDateString("en-GB",{day:"numeric",month:"short"}); }
+  function gameWeekStats(feed, start, end){
+    var n=0, w=0;
+    (feed||[]).forEach(function(x){
+      if(!x.games) return;
+      var d=x.interval.start;
+      if(d<start || d>=end) return;
+      Object.keys(x.games).forEach(function(gk){ var g=x.games[gk]; n+=(g.win||0)+(g.loss||0)+(g.draw||0); w+=(g.win||0); });
+    });
+    return { n:n, acc: n ? Math.round(w/n*100) : null };
+  }
+  function renderWeek(){
+    var now=new Date(); var today=weekDayStart(now); var dow=now.getUTCDay();
+    var thisFri, thu;
+    if(dow===4){ thisFri=today-6*86400000; thu=today; }
+    else { thisFri=today-(((dow-5+7)%7))*86400000; thu=thisFri-86400000; }
+    var thisWed=thisFri+5*86400000;
+    var lastFri=thisFri-7*86400000; var lastWed=lastFri+5*86400000;
+    var feed=state.gameFeed||[];
+    var tw=gameWeekStats(feed, thisFri, Math.min(thisWed+86400000, today+86400000));
+    var lw=gameWeekStats(feed, lastFri, lastWed+86400000);
+    var th=gameWeekStats(feed, thu, thu+86400000);
+    var has=state.actLoaded;
+    $("weekThisDates").textContent="Fri "+weekFmt(thisFri)+" – Wed "+weekFmt(thisWed);
+    $("weekLastDates").textContent="Fri "+weekFmt(lastFri)+" – Wed "+weekFmt(lastWed);
+    $("weekThuDates").textContent="Thu "+weekFmt(thu)+(dow===4?" · today":"");
+    $("weekThisCount").textContent=has?String(tw.n):"—";
+    $("weekThisAcc").textContent=has?(tw.acc==null?"—":tw.acc+"%"):"—";
+    $("weekLastCount").textContent=has?String(lw.n):"—";
+    $("weekLastAcc").textContent=has?(lw.acc==null?"—":lw.acc+"%"):"—";
+    $("weekThuCount").textContent=has?String(th.n):"—";
+    $("weekThuAcc").textContent=has?(th.acc==null?"—":th.acc+"%"):"—";
+    var mx=Math.max(tw.n, lw.n, 1);
+    $("weekThisBar").style.width=Math.round(tw.n/mx*100)+"%";
+    $("weekLastBar").style.width=Math.round(lw.n/mx*100)+"%";
+    var vs=$("weekVs");
+    if(!has){ vs.textContent=""; }
+    else if(lw.n===0 && tw.n>0){ vs.textContent="First week counted"; }
+    else if(tw.n>lw.n){ vs.textContent="▲ "+(tw.n-lw.n)+" more than last week"; }
+    else if(tw.n<lw.n){ vs.textContent="▼ "+(lw.n-tw.n)+" fewer than last week"; }
+    else { vs.textContent="Same as last week"; }
+  }
+  function showUserError(m){ var e=$("userError"); e.textContent=m; e.style.display="block"; }
+  function showTokenError(m){ var e=$("tokenError"); e.textContent=m; e.style.display="block"; }
+
+  /* ---------- WIRING ---------- */
+  function startTracking(u, isAuto){
+    if(!u) return;
+    $("userError").style.display="none";
+    $("connectBtn").textContent="Connecting…";
+    state.user=u;
+    lichessFetch("https://lichess.org/api/user/"+encodeURIComponent(u),{headers:{"Accept":"application/json"}},2)
+      .then(function(r){ if(r.status===404) throw new Error("notfound"); if(!r.ok) throw new Error("http"); return r.json(); })
+      .then(function(d){
+        state.prevTotal=null;
+        $("connectBtn").textContent="Start tracking →";
+        $("connectCard").style.display="none";
+        $("hero").classList.add("show"); $("tiles").classList.add("show"); $("grid2").classList.add("show"); $("gamesSection").classList.add("show"); $("weekSection").classList.add("show");
+        var aj=d.createdAt?Math.floor((Date.now()-d.createdAt)/86400000):null;
+        $("statAge").textContent=aj==null?"—":(aj>365?Math.floor(aj/365)+"y "+Math.floor(aj%365/30)+"m":aj+" days");
+        applyProfile(d,true);
+        fetchHistory(); fetchPerfDetails(); fetchActivityFeed();
+        if(state.token) loadDeep(false);
+        ensureTimer();
+        toast(isAuto ? "Live — tracking "+u+" ("+fmt(d.count&&d.count.all?d.count.all:0)+" games). Finish one and watch it climb." : "Connected — tracking "+u+" live. Go play a game and watch this page.");
+        if(!isAuto) window.scrollTo({top:0,behavior:"smooth"});
+      })
+      .catch(function(e){
+        $("connectBtn").textContent="Start tracking →";
+        if(e.message==="notfound"){ showUserError("That username wasn't found on Lichess. Check the spelling — it must match your lichess.org name exactly, without the @."); return; }
+        if(isAuto && state.snapshotShown){
+          // Keep showing the verified snapshot and keep retrying live every 20s
+          $("liveText").textContent="Snapshot "+SNAPSHOT_LABEL+" · retrying live…";
+          ensureTimer();
+        } else if(!isAuto){
+          showUserError("Couldn't reach Lichess. Check your connection and try again.");
+        }
+      });
+  }
+  function ensureTimer(){
+    if(state.timer) clearInterval(state.timer);
+    state.countdown=20;
+    state.timer=setInterval(function(){
+      state.countdown--;
+      var cd=document.getElementById("cd"); if(cd) cd.textContent=state.countdown;
+      var ago=document.getElementById("chkAgo"); if(ago&&state.lastFetch) ago.textContent=timeAgo(state.lastFetch);
+      if(state.lastFetch) updateLivePill();
+      if(state.countdown<=0){ state.countdown=20; fetchProfile(true); }
+    },1000);
+  }
+  function showSnapshot(){
+    state.user=SNAPSHOT.username; state.snapshotShown=true;
+    $("connectCard").style.display="none";
+    $("hero").classList.add("show"); $("tiles").classList.add("show"); $("grid2").classList.add("show"); $("gamesSection").classList.add("show"); $("weekSection").classList.add("show");
+    var aj=Math.floor((Date.now()-SNAPSHOT.createdAt)/86400000);
+    $("statAge").textContent=(aj>365?Math.floor(aj/365)+"y "+Math.floor((aj%365)/30)+"m":aj+" days");
+    applyProfile(SNAPSHOT,true);
+    $("chartBox").innerHTML='<p class="desc">Not enough rapid history yet — Lichess publishes rating points over time, and this chart draws itself automatically once they land. Your live rapid rating in the Games arena above is always current.</p>';
+    $("liveDot").classList.add("on");
+    $("liveText").textContent="Snapshot "+SNAPSHOT_LABEL+" · connecting live…";
+    var sc=$("subCount"); if(sc) sc.innerHTML="<strong>"+fmt(SNAPSHOT.count.all)+"</strong> games · verified snapshot from Lichess ("+SNAPSHOT_LABEL+") — refreshing live now, then every 20s";
+  }
+  $("userForm").addEventListener("submit", function(ev){
+    ev.preventDefault();
+    var u=$("usernameInput").value.trim().replace(/^@/,"");
+    if(u) lsSet(LS.user, u);
+    startTracking(u, false);
+  });
+  $("changeUserBtn").addEventListener("click", function(){
+    if(state.timer) clearInterval(state.timer);
+    state.user=null; state.prevTotal=null; state.sessionSolved=0; state.todayExact=null; state.prevGames=null; state.gameFeed=[]; state.winStreak=0; state.dayStreak=0; state.actLoaded=false; state.perfLoaded=false; $("activityList").innerHTML='<p class="desc" style="margin-top:10px">Loading your recent days…</p>'; renderWeek();
+    $("hero").classList.remove("show"); $("tiles").classList.remove("show"); $("grid2").classList.remove("show"); $("gamesSection").classList.remove("show");
+    $("connectCard").style.display="block"; $("liveDot").classList.remove("on"); $("liveText").textContent="Not connected yet";
+  });
+  /* Refresh tells the truth: the button stays in a "Refreshing…" state
+     until the profile fetch actually resolves, the success toast only
+     fires when Lichess answered, and the slower sections refresh after
+     the counter — not in the same burst that used to invite a 429. */
+  $("refreshBtn").addEventListener("click", function(){
+    var btn=$("refreshBtn"); if(btn.disabled) return;
+    btn.disabled=true; var oldLabel=btn.textContent; btn.textContent="↻ Refreshing…";
+    fetchProfile(false).then(function(ok){
+      btn.disabled=false; btn.textContent=oldLabel;
+      if(ok){
+        toast("Refreshed from Lichess ✓");
+        fetchHistory(); fetchPerfDetails(); fetchActivityFeed();
+        if(state.token) loadDeep(false);
+      } else {
+        toast("Couldn't reach Lichess — showing the last data that loaded. It retries by itself every 20s.");
+      }
+    });
+  });
+  $("goalInput").addEventListener("change", function(){ lsSet(LS.goal, String(Math.max(1, parseInt($("goalInput").value,10)||5))); if(state.profile) applyProfile(state.profile,false); });
+  $("tokenForm").addEventListener("submit", function(ev){
+    ev.preventDefault();
+    var t=sanitizeToken($("tokenInput").value);
+    if(!t && state.token){
+      /* The box is empty because the token is already saved on this phone —
+         Unlock then simply means "load / reload my puzzle review", so a retry
+         never demands a re-paste. */
+      $("tokenError").style.display="none";
+      state.deepRetries=0; clearDeepRetry();
+      setTokenStatus("⏳ <b>Using the token saved on this phone.</b> Loading your puzzle review…");
+      loadDeep(true);
       return;
     }
-    mv = S.chess.move({ from: from, to: to, promotion: isPromo ? (promotion || "q") : undefined });
-  } catch (e) { return; }
-  if (!mv) return;
-  S.selected = null; S.legal = [];
-  if (mv.captured) sndCapture(); else sndMove();
-  if (S.chess.inCheck()) sndCheck();
-  S.lastAnim = { from: from, to: to };
-  renderAll();
-  // optimistic clock: add increment to my displayed clock
-  var inc = S.myColor === "white" ? S.clocks.winc : S.clocks.binc;
-  if (S.myColor === "white") S.clocks.w += inc; else S.clocks.b += inc;
-  S.clocks.turn = S.chess.turn(); S.clocks.at = performance.now();
-  S.pendingUci = uci;
-  setConn("syncing", "MOVE SYNCING");
-  apiPost("/api/board/game/" + S.gameId + "/move/" + uci).then(function () {
-    // server echo arrives via gameState; if it never does, reconciliation fixes it
-    setTimeout(function () {
-      if (S.pendingUci === uci) { /* still unconfirmed: keep syncing state until next gameState */ }
-    }, 1000);
-  }).catch(function (e) {
-    toast("Move rejected: " + errText(e), "err");
-    // reconcile from server state
-    if (S.game) openGame(S.gameId);
+    if(!t){ showTokenError("Paste your token first — the long code from Lichess that starts with lip_."); return; }
+    $("tokenError").style.display="none";
+    setTokenStatus("⏳ <b>Checking your token with Lichess…</b> If the connection drops a request, this page retries by itself — give it a few seconds.");
+    var btn=$("tokenBtn"); var oldLabel=btn.textContent;
+    btn.disabled=true; btn.textContent="Checking token with Lichess…";
+    testToken(t)
+      .then(function(info){
+        state.token=t; state.tokenUser=info.name; state.deepRetries=0; clearDeepRetry();
+        var saved = lsSet(LS.token, t);
+        state.remembered = saved;
+        $("tokenInput").value="";
+        $("tokenDisconnect").classList.remove("hidden");
+        $("deepRetry").classList.remove("hidden");
+        var mismatch = state.user && info.name && info.name.toLowerCase()!==String(state.user).toLowerCase();
+        setTokenStatus("✓ <b>Token connected.</b> Lichess confirms this token belongs to <b>@"+info.name+"</b>. Your puzzle review is loading below — it loads only if <code>puzzle:read</code> is ticked on the token, and if it isn't, this page will say so plainly instead of failing quietly."+(saved?"<br><b>Remembered on this phone:</b> this browser has saved the token, so next time you open this page's link it reconnects by itself — no need to paste again.":"<br><b>Heads up:</b> this browser blocked saving (common in private mode or inside another app's built-in browser), so the token works now but may need pasting again next visit. Open this link in Chrome or Safari directly and unlock once more to make it stick.")+(mismatch?"<br>Note: the game tracker above is following @"+state.user+", but this token is for @"+info.name+" — the puzzle review will show @"+info.name+"'s wrong puzzles.":""));
+        loadDeep(true);
+      })
+      .catch(function(e){
+        if(e && e.kind==="network"){
+          /* Don't dead-end the user on a dropped check: keep the token, save it
+             on this phone, and load the puzzle review directly — its answers
+             are the real verdict (loadDeep itself retries and reports the
+             exact Lichess answer if it still fails). */
+          state.token=t; state.deepRetries=0;
+          var saved2=lsSet(LS.token,t); state.remembered=saved2;
+          $("tokenInput").value="";
+          $("tokenDisconnect").classList.remove("hidden");
+          $("deepRetry").classList.remove("hidden");
+          setTokenStatus("⏳ <b>Token saved on this phone.</b> Lichess could not confirm it just now: "+(e&&e.message?e.message:"")+" Loading your puzzle review directly instead — if it appears below, you're connected.");
+          loadDeep(true);
+          return;
+        }
+        showTokenError(e&&e.message?e.message:"That token couldn't be checked. Try again.");
+      })
+      .then(function(){ btn.disabled=false; btn.textContent=oldLabel; });
   });
-}
+  $("deepRetry").addEventListener("click", function(){
+    if(!state.token) return;
+    $("tokenError").style.display="none";
+    state.deepRetries=0; clearDeepRetry();
+    setTokenStatus("⏳ <b>Retrying your puzzle review…</b>");
+    loadDeep(true);
+  });
+  // Top Retry button (in the hero, so no scrolling): same action as the
+  // Retry button below. If no token is saved yet, scroll to the token box.
+  $("deepRetryTop").addEventListener("click", function(){
+    if(!state.token){ var el=$("tokenInput"); if(el) el.scrollIntoView({behavior:"smooth", block:"center"}); if(el) el.focus(); setTokenStatus("Paste your token below first, then tap Unlock puzzle review."); return; }
+    $("deepRetry").click();
+  });
+  /* Coming back to this tab, or the connection coming back, is a natural
+     moment for the serialized queue to try the puzzle review again. */
+  document.addEventListener("visibilitychange", function(){
+    if(!document.hidden && state.token && !state.deepLoaded && !state.deepBusy){ clearDeepRetry(); loadDeep(false); }
+  });
+  window.addEventListener("online", function(){
+    if(state.user) fetchProfile(true);
+    if(state.token && !state.deepLoaded && !state.deepBusy){ clearDeepRetry(); loadDeep(false); }
+  });
+  $("tokenDisconnect").addEventListener("click", function(){
+    state.token=null; state.tokenUser=null; state.todayExact=null; state.remembered=false;
+    lsDel(LS.token);
+    lsDel(LS.today);
+    $("tokenDisconnect").classList.add("hidden");
+    clearDeepRetry(); state.deepRetries=0; state.lastDeep=0; state.deepLoaded=false;
+    var drb=$("deepRetry"); if(drb) drb.classList.add("hidden");
+    setTokenStatus("");
+    $("tokenError").style.display="none";
+    // Review progress is NOT deleted — it stays saved on this phone (see the note in the token box).
+    state.srsLoaded=false; state.srsAll=[];
+    $("srsLocked").classList.remove("hidden"); $("srsLive").classList.add("hidden");
+    $("srsDueList").innerHTML=""; $("srsWrongList").innerHTML=""; $("srsDueCount").textContent="0"; $("srsSummary").textContent=""; $("srsAutoNote").style.display="none";
+    if(state.profile) applyProfile(state.profile,false);
+    toast("Token disconnected — this page has forgotten it. Your puzzle review progress stays saved on this phone.");
+  });
 
-/* ---------------- seek / matchmaking ---------------- */
-function tcLabel(tc) { return tc.time + "+" + tc.inc; }
-function updatePlayBtn() {
-  var b = $("#playBtn");
-  if (S.seeking) { b.textContent = "✕  CANCEL SEEK"; b.disabled = false; }
-  else { b.innerHTML = "▶&nbsp; PLAY"; b.disabled = !S.token || !!S.gameId; }
-  b.disabled = b.disabled || !S.token;
-}
-function setSeekLine(msg, kind) {
-  var el = $("#seekLine");
-  el.textContent = msg || "";
-  el.className = "seekline" + (kind ? " " + kind : "");
-}
-function startSeek() {
-  if (!S.token) { toast("Connect first.", "err"); return; }
-  if (S.gameId) return;
-  var tc = S.lastTC;
-  S.seeking = true;
-  updatePlayBtn();
-  setSeekLine("Seeking " + tcLabel(tc) + (S.rated ? " rated" : " casual") + "…", "ok");
-  setConn("seeking", "SEEKING");
-  var ctrl = new AbortController();
-  S.seekCtrl = ctrl;
-  var body = new URLSearchParams({ rated: String(S.rated), variant: "standard", time: String(tc.time), increment: String(tc.inc) }).toString();
-  fetch(API + "/api/board/seek", {
-    method: "POST",
-    headers: { "Authorization": "Bearer " + S.token, "Accept": "application/x-ndjson", "Content-Type": "application/x-www-form-urlencoded" },
-    body: body, credentials: "omit", signal: ctrl.signal
-  }).then(function (resp) {
-    if (!resp.ok) {
-      return resp.text().then(function (t) {
-        var msg = lichessErrorText(t) || ("HTTP " + resp.status);
-        S.seeking = false; updatePlayBtn(); setConn("connected", "CONNECTED");
-        setSeekLine("Lichess refused the seek: " + msg, "err");
-        toast("Seek refused: " + msg, "err");
+  // Puzzle review buttons: event delegation on the due list.
+  $("srsDueList").addEventListener("click", function(ev){
+    var b=ev.target && ev.target.closest ? ev.target.closest("[data-srs]") : null;
+    if(!b) return;
+    srsReview(b.getAttribute("data-pid"), b.getAttribute("data-srs")==="got" ? 4 : 2);
+  });
+  $("srsLoadOlder").addEventListener("click", srsLoadOlder);
+
+  // Restore what this browser remembered from a previous visit (per device):
+  // saved username, daily goal, and — the big one — the token, so opening the
+  // website link reconnects the puzzle review with zero pasting and no Muse sign-in.
+  (function restoreRemembered(){
+    var su=lsGet(LS.user); if(su) $("usernameInput").value=su;
+    var sg=lsGet(LS.goal); var gv=parseInt(sg,10); if(gv>=1 && gv<=500) $("goalInput").value=gv;
+    var st=sanitizeToken(lsGet(LS.token)||"");
+    if(st){
+      state.token=st; state.remembered=true;
+      $("tokenDisconnect").classList.remove("hidden");
+      setTokenStatus("✓ <b>Token remembered on this phone.</b> Reconnecting your puzzle review automatically — no paste needed. Tap Disconnect token below if you ever want this browser to forget it.");
+      // Load puzzle review immediately — don't wait for the token re-check
+      // (that check used to sit ahead of them in the queue, which is why
+      // a refresh took ~15s before the puzzle review appeared).
+      $("deepRetry").classList.remove("hidden");
+      loadDeep(false);
+      // Confirm with Lichess in the background; if it was revoked or lost
+      // puzzle:read meanwhile, forget it here too and say why.
+      testToken(st).then(function(info){
+        state.tokenUser=info.name;
+        /* Don't clobber a deep-stats retry countdown that is already
+           showing — the token is confirmed, the stats are still loading. */
+        if(!state.deepRetryTimer) setTokenStatus("✓ <b>Token connected — remembered from last time.</b> Lichess confirms this token belongs to <b>@"+info.name+"</b>. Your puzzle review loads automatically every visit now.");
+      }).catch(function(e){
+        if(e && e.kind==="network"){
+          return;
+        }
+        state.token=null; state.remembered=false; lsDel(LS.token);
+        $("tokenDisconnect").classList.add("hidden");
+        $("deepRetry").classList.add("hidden");
+        setTokenStatus("");
+        showTokenError("The token this browser remembered no longer works: "+(e&&e.message?e.message:"")+" Paste a fresh token below to reconnect — it will be remembered again.");
       });
     }
-    setSeekLine("Seek live — waiting for an opponent…", "ok");
-    return resp.text().then(function () {
-      // stream closed: accepted (gameStart arrives on event stream) or expired
-      if (S.seeking) {
-        S.seeking = false; updatePlayBtn(); setConn("connected", "CONNECTED");
-        if (!S.gameId) setSeekLine("Seek ended — no opponent found. Tap PLAY to try again.");
-      }
-    });
-  }).catch(function (e) {
-    if (ctrl.signal.aborted) { setSeekLine("Seek cancelled."); }
-    else {
-      S.seeking = false; updatePlayBtn(); setConn("connected", "CONNECTED");
-      setSeekLine("Seek error: " + errText(e), "err");
-    }
-  });
-}
-function cancelSeek() {
-  if (S.seekCtrl) S.seekCtrl.abort();
-  S.seeking = false;
-  updatePlayBtn();
-  setConn("connected", "CONNECTED");
-  setSeekLine("Seek cancelled.");
-}
+  })();
 
-/* ---------------- challenges ---------------- */
-function tcOf(ch) {
-  if (!ch) return "—";
-  var tc = ch.timeControl || {};
-  if (tc.type === "correspondence" || tc.days) return tc.days + " days/turn";
-  if (tc.type === "unlimited") return "Unlimited";
-  var lim = tc.limit, inc = tc.increment;
-  if (lim == null) return "—";
-  return (lim / 60) + "+" + (inc || 0);
-}
-function renderDeck() {
-  var list = Array.from(S.challenges.values());
-  var html = "";
-  if (!list.length) html = '<div class="empty">No challenges right now.</div>';
-  list.forEach(function (ch) {
-    var incoming = ch.challenger && S.me && ch.challenger.id !== S.me.id;
-    var name = incoming ? (ch.challenger.name || ch.challenger.id) : (ch.destUser && (ch.destUser.name || ch.destUser.id) || "?");
-    var rating = incoming ? ch.challenger.rating : (ch.destUser && ch.destUser.rating);
-    html += '<div class="chcard" data-id="' + esc(ch.id) + '"><div class="who">' + (incoming ? "⚔ " : "→ ") + esc(name) + (rating ? " · " + rating : "") + '</div>' +
-      '<div class="meta">' + esc(tcOf(ch)) + " · " + (ch.rated ? "Rated" : "Casual") + " · " + esc(ch.variant && ch.variant.name || "Standard") + (incoming ? " · challenges you" : " · waiting…") + "</div>" +
-      '<div class="acts">' + (incoming
-        ? '<button class="btn" data-act="accept">ACCEPT</button><button class="btn ghost" data-act="decline">DECLINE</button>'
-        : '<button class="btn ghost" data-act="cancel">CANCEL</button>') + "</div></div>";
-  });
-  $("#deck").innerHTML = html;
-  $("#deckDesk").innerHTML = html;
-  $$("#deck .chcard, #deckDesk .chcard").forEach(function (card) {
-    card.querySelectorAll("[data-act]").forEach(function (btn) {
-      btn.onclick = function () { challengeAction(card.dataset.id, btn.dataset.act); };
-    });
-  });
-}
-function challengeAction(id, act) {
-  var path = "/api/challenge/" + id + "/" + act;
-  var body = act === "decline" ? { reason: "generic" } : null;
-  apiPost(path, body).then(function () {
-    if (act !== "accept") { S.challenges.delete(id); renderDeck(); }
-    if (act === "accept") toast("Challenge accepted — game starting…", "ok");
-  }).catch(function (e) { toast("Challenge " + act + " failed: " + errText(e), "err"); });
-}
-function sendChallenge() {
-  var user = $("#chUser").value.trim();
-  if (!user) { toast("Type a username to challenge.", "err"); return; }
-  var parts = $("#chTC").value.split("|");
-  var limit = parseInt(parts[0], 10) * 60, inc = parseInt(parts[1], 10);
-  apiPost("/api/challenge/" + encodeURIComponent(user), {
-    "clock.limit": String(limit), "clock.increment": String(inc),
-    rated: String(S.rated), color: "random", variant: "standard", keepAliveStream: "true"
-  }).then(function (r) { return r.json(); }).then(function (d) {
-    if (d && d.challenge) { S.challenges.set(d.challenge.id, d.challenge); renderDeck(); }
-    toast("Challenge sent to @" + user + " — waiting…", "ok");
-  }).catch(function (e) { toast("Challenge failed: " + errText(e), "err"); });
-}
-
-/* ---------------- dock actions ---------------- */
-function gameAction(path, okMsg) {
-  if (!S.gameId) return;
-  apiPost("/api/board/game/" + S.gameId + path).then(function () { toast(okMsg || "Done.", "ok"); })
-    .catch(function (e) { toast("Failed: " + errText(e), "err"); });
-}
-function updateDock() {
-  var inGame = !!S.gameId && !S.gameEnded;
-  $("#drawBtn").disabled = !inGame;
-  $("#undoBtn").disabled = !inGame;
-  $("#flipBtn").disabled = !S.gameId;
-  $("#resignBtn").disabled = !inGame;
-}
-function showConfirm(title, text, onYes) {
-  $("#confirmTitle").textContent = title;
-  $("#confirmText").textContent = text;
-  $("#confirmSheet").classList.add("show");
-  var yes = $("#confirmYes");
-  var handler = function () {
-    $("#confirmSheet").classList.remove("show");
-    yes.removeEventListener("click", handler);
-    onYes();
-  };
-  yes.addEventListener("click", handler);
-  $("#confirmNo").onclick = function () { $("#confirmSheet").classList.remove("show"); yes.removeEventListener("click", handler); };
-}
-
-/* ---------------- tabs ---------------- */
-function showTab(name) {
-  ["Game", "Chat", "Details"].forEach(function (n) {
-    $("#tab" + n).classList.toggle("on", n === name);
-    $("#panel" + n).classList.toggle("hide", n !== name);
-  });
-  if (name === "Chat") { S.chatUnread = 0; $("#chatBadge").classList.add("hide"); }
-}
-
-/* ---------------- wiring ---------------- */
-function init() {
-  buildBoard();
-  renderPieces();
-  markSquares();
-  renderMoves();
-  S.sound = load("op_sound_v1", true);
-  $("#soundBtn").classList.toggle("on", S.sound);
-  S.lastTC = load("op_tc_v1", { time: 5, inc: 3 });
-  S.rated = load("op_rated_v1", true);
-  $("#ratedToggle").classList.toggle("on", S.rated);
-  $$("#chips .chip").forEach(function (c) {
-    var tc = { time: parseInt(c.dataset.time, 10), inc: parseInt(c.dataset.inc, 10) };
-    c.classList.toggle("on", tc.time === S.lastTC.time && tc.inc === S.lastTC.inc);
-    c.onclick = function () {
-      S.lastTC = tc; save("op_tc_v1", tc);
-      $$("#chips .chip").forEach(function (x) { x.classList.remove("on"); });
-      c.classList.add("on");
-    };
-  });
-  $("#ratedToggle").onclick = function () {
-    S.rated = !S.rated; save("op_rated_v1", S.rated);
-    $("#ratedToggle").classList.toggle("on", S.rated);
-  };
-  $("#soundBtn").onclick = function () {
-    S.sound = !S.sound; save("op_sound_v1", S.sound);
-    $("#soundBtn").classList.toggle("on", S.sound);
-    if (S.sound) sndMove();
-  };
-  $("#connectBtn").onclick = function () {
-    var user = $("#inUser").value.trim();
-    var token = $("#inToken").value.trim();
-    if (!user || !token) { $("#connStatus").className = "status err"; $("#connStatus").textContent = "Enter your username and token."; return; }
-    $("#connStatus").className = "status"; $("#connStatus").textContent = "Connecting…";
-    validateAndConnect(token, user, false).catch(function () {});
-  };
-  $("#disconnectBtn").onclick = disconnect;
-  $("#playBtn").onclick = function () { if (S.seeking) cancelSeek(); else startSeek(); };
-  $("#challengeBtn").onclick = sendChallenge;
-  $("#drawBtn").onclick = function () { gameAction("/draw/yes", "Draw offered."); };
-  $("#undoBtn").onclick = function () { gameAction("/takeback/yes", "Takeback requested."); };
-  $("#flipBtn").onclick = function () { S.orient = S.orient === "white" ? "black" : "white"; buildBoard(); renderPieces(); markSquares(); };
-  $("#resignBtn").onclick = function () {
-    showConfirm("Resign the game?", "This ends the game now and counts as a loss.", function () { gameAction("/resign", "You resigned."); });
-  };
-  $("#tabGame").onclick = function () { showTab("Game"); };
-  $("#tabChat").onclick = function () { showTab("Chat"); };
-  $("#tabDetails").onclick = function () { showTab("Details"); };
-  $("#chatSend").onclick = sendChat;
-  $("#chatInput").addEventListener("keydown", function (e) { if (e.key === "Enter") sendChat(); });
-  $("#replayBtn").onclick = function () { toast("Replay is coming in Phase 2.", "ok"); };
-  $("#analyzeBtn").onclick = function () { toast("Analyze is coming in Phase 2 — the Engine Lab.", "ok"); };
-  $("#playAgainBtn").onclick = function () {
-    $("#endOverlay").classList.remove("show");
-    S.gameId = null; S.game = null; S.gameEnded = false;
-    $("#gameView").style.display = "none";
-    $("#homeView").classList.remove("hide");
-    refreshOngoing();
-    startSeek();
-  };
-  $("#endHomeBtn").onclick = function () {
-    $("#endOverlay").classList.remove("show");
-    S.gameId = null; S.game = null; S.gameEnded = false;
-    $("#gameView").style.display = "none";
-    $("#homeView").classList.remove("hide");
-    refreshOngoing();
-  };
-  $$("#promoBtns button").forEach(function (b) {
-    b.onclick = function () {
-      $("#promoSheet").classList.remove("show");
-      var p = S.promoPending; S.promoPending = null;
-      if (p) doMove(p.from, p.to, b.dataset.p, false);
-    };
-  });
-  $("#promoSheet").addEventListener("click", function (e) {
-    if (e.target === this) { this.classList.remove("show"); S.promoPending = null; }
-  });
-  document.addEventListener("keydown", function (e) {
-    if (e.code === "Space" && S.token && !S.gameId && !S.seeking && $("#homeView").classList.contains("hide") === false) {
-      if (document.activeElement && (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "SELECT")) return;
-      e.preventDefault(); startSeek();
-    }
-  });
-  // restore session
-  var tok = load("op_token_v1", null);
-  var usr = load("op_user_v1", null);
-  if (tok && usr) {
-    $("#inUser").value = usr;
-    $("#inToken").value = tok;
-    validateAndConnect(tok, usr, true).catch(function () { setConnectedUI(false); });
-  } else {
-    setConnectedUI(false);
-  }
-  if ("serviceWorker" in navigator) { navigator.serviceWorker.register("sw.js").catch(function () {}); }
-  updatePlayBtn();
-  renderDeck();
-}
-document.addEventListener("DOMContentLoaded", init);
+  srsLoad();
+  renderWeek();
+  if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
+  // Default account: skypiercer_3 — verified snapshot instantly, then live fetch replaces it
+  showSnapshot();
+  startTracking(($("usernameInput").value||"skypiercer_3").trim().replace(/^@/,"") || "skypiercer_3", true);
+})();
 </script>
 </body>
 </html>
