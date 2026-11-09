@@ -224,7 +224,7 @@
       <button class="btn" type="submit" id="connectBtn">Start tracking →</button>
     </form>
     <div class="err" id="userError"></div>
-    <p class="hint">Exactly as it appears on lichess.org, without the @ — not case-sensitive. Change it here anytime to track a different account. Only the username is needed for the live counter, ratings and games. The puzzle review (wrong puzzles, spaced repetition) unlocks with an optional token below.</p>
+    <p class="hint">Exactly as it appears on lichess.org, without the @ — not case-sensitive. Change it here anytime to track a different account. Only the username is needed for the live counter, ratings and games. Your puzzles today and this week, plus the puzzle review (wrong puzzles, spaced repetition), unlock with an optional token below.</p>
     <div class="steps">
       <div class="step"><b><i>1</i> Enter username</b><p>We fetch your total games, game ratings (bullet, blitz, rapid) and your recent battle days — all from the public Lichess API.</p></div>
       <div class="step"><b><i>2</i> Play anywhere</b><p>Play games on lichess.org or the Lichess phone app — same account, every mode counts.</p></div>
@@ -304,6 +304,67 @@
   </section>
 
 
+
+  <!-- PUZZLES — TODAY & THIS WEEK -->
+  <section class="arena show" id="puzzleSection">
+    <div class="sec-head">
+      <div><h3>Puzzles — today &amp; this week</h3><p>Your puzzles on this account, just like the puzzle tracker. Needs the token below (puzzle:read only) — the numbers unlock when you connect it.</p></div>
+    </div>
+    <p class="desc" id="pzLockedNote" style="margin-top:10px">Connect the token below to see your puzzles today and this week. Your wrong puzzles and their review schedule live in Puzzle review further down.</p>
+    <div class="arena-grid">
+      <div class="panel">
+        <h3>Puzzles today</h3>
+        <div class="ringbox" style="margin-top:12px">
+          <div class="ringwrap">
+            <svg width="148" height="148" viewBox="0 0 148 148"><circle cx="74" cy="74" r="64" fill="none" stroke="var(--line)" stroke-width="11"/><circle id="pzRingFg" cx="74" cy="74" r="64" fill="none" stroke="var(--gold)" stroke-width="11" stroke-linecap="round" stroke-dasharray="402" stroke-dashoffset="402"/></svg>
+            <div class="ring-c"><div><b id="pzRingNum">–</b><span>today</span></div></div>
+          </div>
+          <p id="pzRingText">Daily goal ring fills as today's puzzles are counted.</p>
+          <label class="goalrow">Daily goal <input type="number" id="pzGoalInput" min="1" max="500" value="10"> puzzles</label>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>All-time puzzles</h3>
+        <p class="desc">Total puzzles and rating from your public profile — no token needed.</p>
+        <div id="pzTotalLine" style="margin-top:10px">—</div>
+      </div>
+    </div>
+    <div class="tiles" id="pzTiles" style="margin-top:12px">
+      <div class="tile"><div class="k">Puzzles today</div><div class="v" id="pzToday">—</div><div class="s" id="pzTodaySub">Solved today, any theme.</div></div>
+      <div class="tile"><div class="k">First-try rate (14 days)</div><div class="v" id="pzWinRate">—</div><div class="s" id="pzWinRateSub">Across your last 14 days of puzzles.</div></div>
+      <div class="tile"><div class="k">Current puzzle win streak</div><div class="v" id="pzWinStreak">—</div><div class="s" id="pzWinStreakSub">Consecutive first-try solves, newest first.</div></div>
+      <div class="tile"><div class="k">Puzzle day streak</div><div class="v" id="pzDayStreak">—</div><div class="s" id="pzDayStreakSub">Days in a row with at least one puzzle.</div></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-top:18px">
+      <h3 style="font-size:26px;margin:0">Puzzles this week, at a glance</h3>
+      <span id="pzWeekVs" style="font-size:15px;color:var(--muted)"></span>
+    </div>
+    <div style="display:grid;grid-template-columns:1.15fr 1fr;gap:12px;margin-top:14px">
+      <div class="panel" style="border:2px solid var(--gold)">
+        <div class="k">THIS WEEK</div>
+        <div id="pzWeekThisDates" style="color:var(--muted);font-size:14px;margin-top:2px">Fri – Wed</div>
+        <div style="display:flex;gap:28px;align-items:flex-end;flex-wrap:wrap;margin-top:10px">
+          <div><div style="font-size:58px;font-weight:800;line-height:1" id="pzWeekThisCount">—</div><div style="color:var(--muted)">puzzles</div></div>
+          <div><div style="font-size:58px;font-weight:800;line-height:1" id="pzWeekThisAcc">—</div><div style="color:var(--muted)">first-try rate</div></div>
+        </div>
+        <div class="bar" style="margin-top:16px"><i id="pzWeekThisBar" style="width:0%"></i></div>
+      </div>
+      <div class="panel">
+        <div class="k">LAST WEEK</div>
+        <div id="pzWeekLastDates" style="color:var(--muted);font-size:14px;margin-top:2px">Fri – Wed</div>
+        <div style="display:flex;gap:28px;align-items:flex-end;flex-wrap:wrap;margin-top:10px">
+          <div><div style="font-size:58px;font-weight:800;line-height:1" id="pzWeekLastCount">—</div><div style="color:var(--muted)">puzzles</div></div>
+          <div><div style="font-size:58px;font-weight:800;line-height:1" id="pzWeekLastAcc">—</div><div style="color:var(--muted)">first-try rate</div></div>
+        </div>
+        <div class="bar" style="margin-top:16px"><i id="pzWeekLastBar" style="width:0%"></i></div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div><div class="k">THURSDAY — BONUS ONLY</div><div id="pzWeekThuDates" style="color:var(--muted);font-size:14px;margin-top:2px">Thursday</div></div>
+      <div style="margin-left:auto;text-align:right"><div style="font-size:42px;font-weight:800;line-height:1" id="pzWeekThuCount">—</div><div style="color:var(--muted)">puzzles · <span id="pzWeekThuAcc">—</span> first-try rate</div></div>
+    </div>
+    <p style="color:var(--muted);font-size:13px;margin:10px 0 0">Week = Friday to Wednesday. Thursday is bonus only, not counted in the week.</p>
+  </section>
 
   <!-- GAMES ARENA -->
   <section class="arena" id="gamesSection">
@@ -414,14 +475,14 @@
 (function(){
   "use strict";
   var $ = function(id){ return document.getElementById(id); };
-  var state = { user:null, profile:null, total:0, prevTotal:null, sessionStartTotal:null, sessionSolved:0, token:null, tokenUser:null, remembered:false, deepBusy:false, deepLoaded:false, profileBusy:false, profilePromise:null, actLoaded:false, perfLoaded:false, lastDeep:0, deepRetryTimer:null, deepRetries:0, activity:[], gameFeed:[], todayExact:null, winStreak:0, dayStreak:0, srs:{}, srsBusy:false, srsLoaded:false, srsOldest:null, srsAll:[], timer:null, countdown:20, lastFetch:null, prevGames:null };
+  var state = { user:null, profile:null, total:0, prevTotal:null, sessionStartTotal:null, sessionSolved:0, token:null, tokenUser:null, remembered:false, deepBusy:false, deepLoaded:false, profileBusy:false, profilePromise:null, actLoaded:false, perfLoaded:false, lastDeep:0, deepRetryTimer:null, deepRetries:0, activity:[], gameFeed:[], todayExact:null, winStreak:0, dayStreak:0, pzGoal:10, srs:{}, srsBusy:false, srsLoaded:false, srsOldest:null, srsAll:[], timer:null, countdown:20, lastFetch:null, prevGames:null };
 
   /* Remember-me storage: the token (and username/goal) live in THIS browser's
      local storage on THIS device only, so the public website link can be opened
      by anyone (e.g. family) with no Muse account — paste once per phone/browser,
      then it reconnects by itself. Nothing is baked into the page or sent anywhere
      except lichess.org. Wrapped in try/catch: in-app/private browsers may block it. */
-  var LS = { token:"opt_token_v1", user:"opt_user_v1", goal:"opt_goal_v1", today:"opt_today_v1", srs:"opt_srs_v1" };
+  var LS = { token:"opt_token_v1", user:"opt_user_v1", goal:"opt_goal_v1", today:"opt_today_v1", srs:"opt_srs_v1", pgoal:"opt_pgoal_v1" };
   function lsGet(k){ try{ return window.localStorage.getItem(k); }catch(e){ return null; } }
   function lsSet(k,v){ try{ window.localStorage.setItem(k,v); return window.localStorage.getItem(k)===v; }catch(e){ return false; } }
   function lsDel(k){ try{ window.localStorage.removeItem(k); }catch(e){} }
@@ -519,6 +580,8 @@
 
     renderBadges(total);
     renderGames(data);
+    var pz=data.perfs&&data.perfs.puzzle;
+    $("pzTotalLine").innerHTML = (pz&&pz.games) ? '<span style="font-size:42px;font-weight:800;line-height:1">'+fmt(pz.games)+'</span> <span style="color:var(--muted)">puzzles · rating <b style="color:var(--ink)">'+fmt(pz.rating)+'</b></span>' : "No puzzles on this account yet.";
     updateLivePill();
   }
   function updateLivePill(){
@@ -599,7 +662,7 @@
       return '<div class="speedrow"><div class="nm"><b>'+s[1]+'</b><span>'+(s[2]||"variant")+'</span></div>'+
         '<div class="rt">'+(p.rating?fmt(p.rating):"—")+(p.prov?' <span style="font-size:13px;color:var(--faint)">prov.</span>':"")+'</div>'+
         '<div class="rtrack"><i style="width:'+pct+'%"></i></div>'+
-        '<div class="meta"><b>'+fmt(p.games||0)+'</b> games'+progHtml(p.prog)+'<br>±'+(p.rd!=null?p.rd:"—")+' deviation</div></div>';
+        '<div class="meta"><b>'+fmt(p.games||0)+'</b> '+(p.games===1?'game':'games')+progHtml(p.prog)+'<br>±'+(p.rd!=null?p.rd:"—")+' deviation</div></div>';
     }).join("") || '<p class="desc" style="margin-top:12px">No games on this account yet.</p>';
     // record
     var c = data.count||{}; var w=c.win||0, l=c.loss||0, dr=c.draw||0, all=c.all||(w+l+dr);
@@ -646,6 +709,11 @@
           }
           state.perfLoaded=true;
           var st=d.stat, cnt=st.count||{};
+          var nb=(d.perf&&d.perf.nb)||0;
+          // Lichess's own /perf stat table is empty for some speeds on this
+          // account (rapid: 25 games, count 0) — showing 0W·0D·0L would be
+          // a lie, so say it plainly instead of faking a record.
+          var recHtml = (cnt.all>0) ? fmt(cnt.win||0)+'W · '+fmt(cnt.draw||0)+'D · '+fmt(cnt.loss||0)+'L' : (nb>0 ? '<span style="color:var(--faint)">not published by Lichess</span>' : '0W · 0D · 0L');
           var peak = st.highest ? fmt(st.highest.int)+(st.highest.at?" · "+new Date(st.highest.at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"") : "—";
           var bw = (st.bestWins && st.bestWins.results && st.bestWins.results[0]) ? st.bestWins.results[0] : null;
           var bwHtml = bw ? '<a href="https://lichess.org/'+bw.gameId+'" target="_blank" rel="noopener">'+bw.opId.name+'</a> ('+fmt(bw.opRating)+')' : "—";
@@ -654,7 +722,7 @@
           el.innerHTML =
             '<div class="kv"><span>Peak rating</span><b>'+peak+'</b></div>'+
             '<div class="kv"><span>Best win vs</span><b>'+bwHtml+'</b></div>'+
-            '<div class="kv"><span>Record at this speed</span><b>'+fmt(cnt.win||0)+'W · '+fmt(cnt.draw||0)+'D · '+fmt(cnt.loss||0)+'L</b></div>'+
+            '<div class="kv"><span>Record at this speed</span><b>'+recHtml+'</b></div>'+
             '<div class="kv"><span>Avg opponent</span><b>'+(cnt.opAvg?fmt(Math.round(cnt.opAvg)):"—")+'</b></div>'+
             '<div class="kv"><span>Win streak</span><b>'+fmt(curW)+' now · best '+fmt(maxW)+'</b></div>'+
             '<div class="kv"><span>World rank</span><b>'+(d.rank?"#"+fmt(d.rank):"unranked yet")+'</b></div>';
@@ -968,6 +1036,7 @@
         var autoN=srsSync(items);
         state.srsLoaded=true;
         renderSRS(autoN);
+        renderPuzzleSection(items);
         if(manual) toast("Puzzle review unlocked — your wrong puzzles are live ✓");
         done();
       }).catch(function(e){
@@ -1131,13 +1200,19 @@
     });
     return { n:n, acc: n ? Math.round(w/n*100) : null };
   }
-  function renderWeek(){
+  // Fri–Wed week windows, Thursday bonus only — shared by the games week
+  // and the puzzles week so both always agree on the dates.
+  function weekWindows(){
     var now=new Date(); var today=weekDayStart(now); var dow=now.getUTCDay();
     var thisFri, thu;
     if(dow===4){ thisFri=today-6*86400000; thu=today; }
     else { thisFri=today-(((dow-5+7)%7))*86400000; thu=thisFri-86400000; }
     var thisWed=thisFri+5*86400000;
     var lastFri=thisFri-7*86400000; var lastWed=lastFri+5*86400000;
+    return {today:today, dow:dow, thisFri:thisFri, thisWed:thisWed, lastFri:lastFri, lastWed:lastWed, thu:thu};
+  }
+  function renderWeek(){
+    var w=weekWindows(); var today=w.today, dow=w.dow, thisFri=w.thisFri, thisWed=w.thisWed, lastFri=w.lastFri, lastWed=w.lastWed, thu=w.thu;
     var feed=state.gameFeed||[];
     var tw=gameWeekStats(feed, thisFri, Math.min(thisWed+86400000, today+86400000));
     var lw=gameWeekStats(feed, lastFri, lastWed+86400000);
@@ -1161,6 +1236,72 @@
     else if(tw.n>lw.n){ vs.textContent="▲ "+(tw.n-lw.n)+" more than last week"; }
     else if(tw.n<lw.n){ vs.textContent="▼ "+(lw.n-tw.n)+" fewer than last week"; }
     else { vs.textContent="Same as last week"; }
+  }
+  /* ---------- PUZZLES — TODAY & THIS WEEK (token-gated) ---------- */
+  // Puzzle items are Lichess puzzle-activity entries (newest first, last
+  // 14 days). One item = one puzzle attempt; win = solved first try.
+  function pzWeekStats(items, start, end){
+    var n=0, w=0;
+    (items||[]).forEach(function(a){
+      if(a.date<start || a.date>=end) return;
+      n++; if(a.win) w++;
+    });
+    return {n:n, acc: n?Math.round(w/n*100):null};
+  }
+  function renderPuzzleWeek(items){
+    var w=weekWindows(); var today=w.today, dow=w.dow;
+    var tw=pzWeekStats(items, w.thisFri, Math.min(w.thisWed+86400000, today+86400000));
+    var lw=pzWeekStats(items, w.lastFri, w.lastWed+86400000);
+    var th=pzWeekStats(items, w.thu, w.thu+86400000);
+    $("pzWeekThisDates").textContent="Fri "+weekFmt(w.thisFri)+" – Wed "+weekFmt(w.thisWed);
+    $("pzWeekLastDates").textContent="Fri "+weekFmt(w.lastFri)+" – Wed "+weekFmt(w.lastWed);
+    $("pzWeekThuDates").textContent="Thu "+weekFmt(w.thu)+(dow===4?" · today":"");
+    $("pzWeekThisCount").textContent=String(tw.n);
+    $("pzWeekThisAcc").textContent=tw.acc==null?"—":tw.acc+"%";
+    $("pzWeekLastCount").textContent=String(lw.n);
+    $("pzWeekLastAcc").textContent=lw.acc==null?"—":lw.acc+"%";
+    $("pzWeekThuCount").textContent=String(th.n);
+    $("pzWeekThuAcc").textContent=th.acc==null?"—":th.acc+"%";
+    var mx=Math.max(tw.n, lw.n, 1);
+    $("pzWeekThisBar").style.width=Math.round(tw.n/mx*100)+"%";
+    $("pzWeekLastBar").style.width=Math.round(lw.n/mx*100)+"%";
+    var vs=$("pzWeekVs");
+    if(lw.n===0 && tw.n>0){ vs.textContent="First week counted"; }
+    else if(tw.n>lw.n){ vs.textContent="▲ "+(tw.n-lw.n)+" more than last week"; }
+    else if(tw.n<lw.n){ vs.textContent="▼ "+(lw.n-tw.n)+" fewer than last week"; }
+    else { vs.textContent="Same as last week"; }
+  }
+  function renderPuzzleSection(items){
+    var ts=srsTodayStart();
+    var today=items.filter(function(a){ return a.date>=ts; });
+    var tSolved=today.length, tWin=0; today.forEach(function(a){ if(a.win) tWin++; });
+    var goal=Math.max(1, state.pzGoal||10);
+    var pct=Math.min(100, Math.round(tSolved/goal*100));
+    $("pzRingFg").style.strokeDashoffset=String(402-402*pct/100);
+    $("pzRingNum").textContent=tSolved+" / "+goal;
+    $("pzRingText").textContent = tSolved>=goal ? "Goal smashed — "+tSolved+" puzzles today. Anything more is pure bonus." : (goal-tSolved)+" more to hit today's goal of "+goal+".";
+    $("pzToday").textContent=fmt(tSolved);
+    $("pzTodaySub").textContent=tWin+" solved first try · "+(tSolved-tWin)+" to retry";
+    var tot=items.length, w=0; items.forEach(function(a){ if(a.win) w++; });
+    $("pzWinRate").textContent= tot?Math.round(w/tot*100)+"%" : "—";
+    $("pzWinRateSub").textContent= w+" first-try wins · "+(tot-w)+" missed in the last 14 days";
+    var ws=0; for(var i=0;i<items.length;i++){ if(items[i].win) ws++; else break; }
+    $("pzWinStreak").textContent=fmt(ws);
+    $("pzWinStreakSub").textContent= ws? "Solve the next one first try to keep it going" : "Solve one first try to start a run";
+    var days={}; items.forEach(function(a){ var d=new Date(a.date); days[Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())]=true; });
+    var ds=0, cur=ts; if(!days[cur]) cur=ts-86400000; while(days[cur]){ ds++; cur-=86400000; }
+    $("pzDayStreak").textContent=fmt(ds)+(ds===1?" day":" days");
+    $("pzDayStreakSub").textContent= ds? "Solve a puzzle today to keep it going" : "Solve a puzzle today to start";
+    renderPuzzleWeek(items);
+    var ln=$("pzLockedNote"); if(ln) ln.style.display="none";
+  }
+  function resetPuzzleSection(){
+    ["pzRingNum","pzToday","pzWinRate","pzWinStreak","pzDayStreak","pzWeekThisCount","pzWeekThisAcc","pzWeekLastCount","pzWeekLastAcc","pzWeekThuCount","pzWeekThuAcc"].forEach(function(id){ $(id).textContent="—"; });
+    $("pzRingFg").style.strokeDashoffset="402";
+    $("pzRingText").textContent="Daily goal ring fills as today's puzzles are counted.";
+    $("pzWeekVs").textContent="";
+    $("pzWeekThisBar").style.width="0%"; $("pzWeekLastBar").style.width="0%";
+    var ln=$("pzLockedNote"); if(ln) ln.style.display="";
   }
   function showUserError(m){ var e=$("userError"); e.textContent=m; e.style.display="block"; }
   function showTokenError(m){ var e=$("tokenError"); e.textContent=m; e.style.display="block"; }
@@ -1230,7 +1371,7 @@
   });
   $("changeUserBtn").addEventListener("click", function(){
     if(state.timer) clearInterval(state.timer);
-    state.user=null; state.prevTotal=null; state.sessionSolved=0; state.todayExact=null; state.prevGames=null; state.gameFeed=[]; state.winStreak=0; state.dayStreak=0; state.actLoaded=false; state.perfLoaded=false; $("activityList").innerHTML='<p class="desc" style="margin-top:10px">Loading your recent days…</p>'; renderWeek();
+    state.user=null; state.prevTotal=null; state.sessionSolved=0; state.todayExact=null; state.prevGames=null; state.gameFeed=[]; state.winStreak=0; state.dayStreak=0; state.actLoaded=false; state.perfLoaded=false; $("activityList").innerHTML='<p class="desc" style="margin-top:10px">Loading your recent days…</p>'; renderWeek(); resetPuzzleSection();
     $("hero").classList.remove("show"); $("tiles").classList.remove("show"); $("grid2").classList.remove("show"); $("gamesSection").classList.remove("show");
     $("connectCard").style.display="block"; $("liveDot").classList.remove("on"); $("liveText").textContent="Not connected yet";
   });
@@ -1253,6 +1394,7 @@
     });
   });
   $("goalInput").addEventListener("change", function(){ lsSet(LS.goal, String(Math.max(1, parseInt($("goalInput").value,10)||5))); if(state.profile) applyProfile(state.profile,false); });
+  $("pzGoalInput").addEventListener("change", function(){ var v=Math.max(1, parseInt($("pzGoalInput").value,10)||10); $("pzGoalInput").value=v; lsSet(LS.pgoal, String(v)); state.pzGoal=v; if(state.srsAll && state.srsAll.length) renderPuzzleSection(state.srsAll); });
   $("tokenForm").addEventListener("submit", function(ev){
     ev.preventDefault();
     var t=sanitizeToken($("tokenInput").value);
@@ -1337,6 +1479,7 @@
     state.srsLoaded=false; state.srsAll=[];
     $("srsLocked").classList.remove("hidden"); $("srsLive").classList.add("hidden");
     $("srsDueList").innerHTML=""; $("srsWrongList").innerHTML=""; $("srsDueCount").textContent="0"; $("srsSummary").textContent=""; $("srsAutoNote").style.display="none";
+    resetPuzzleSection();
     if(state.profile) applyProfile(state.profile,false);
     toast("Token disconnected — this page has forgotten it. Your puzzle review progress stays saved on this phone.");
   });
@@ -1355,6 +1498,7 @@
   (function restoreRemembered(){
     var su=lsGet(LS.user); if(su) $("usernameInput").value=su;
     var sg=lsGet(LS.goal); var gv=parseInt(sg,10); if(gv>=1 && gv<=500) $("goalInput").value=gv;
+    var spg=lsGet(LS.pgoal); var pg=parseInt(spg,10); if(pg>=1 && pg<=500){ $("pzGoalInput").value=pg; state.pzGoal=pg; }
     var st=sanitizeToken(lsGet(LS.token)||"");
     if(st){
       state.token=st; state.remembered=true;
