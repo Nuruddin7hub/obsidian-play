@@ -1557,15 +1557,23 @@
   function navSpy(){
     var cur=NAV[0][1];
     var mid=window.scrollY+window.innerHeight*0.35;
-    NAV.forEach(function(pair){ var el=document.getElementById(pair[0]); if(el && el.offsetTop<=mid) cur=pair[1]; });
+    NAV.forEach(function(pair){
+      var el=document.getElementById(pair[0]);
+      if(!el || el.offsetParent===null) return; // hidden section — skip it
+      var top=el.getBoundingClientRect().top+window.scrollY;
+      if(top<=mid) cur=pair[1];
+    });
     NAV.forEach(function(pair){ var b=document.getElementById(pair[1]); if(b) b.classList.toggle("on", pair[1]===cur); });
   }
   window.addEventListener("scroll", navSpy, {passive:true});
+  window.addEventListener("resize", navSpy);
   navSpy();
+  setTimeout(navSpy, 600); // re-check once the first live load has settled
   if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
   // Default account: skypiercer_3 — verified snapshot instantly, then live fetch replaces it
   showSnapshot();
   startTracking(($("usernameInput").value||"skypiercer_3").trim().replace(/^@/,"") || "skypiercer_3", true);
+  navSpy(); // sections are shown now — highlight the right nav item
 })();
 </script>
 </body>
